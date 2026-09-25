@@ -1,0 +1,53 @@
+[
+  {
+    "passenger": {
+      "id": "P-001",
+      "name": "Marco Rossi",
+      "contact": "marco.rossi@example.com",
+      "special_needs": []
+    },
+    "booking": {
+      "booking_ref": "AZX4K2",
+      "flight_no": "AU610",
+      "origin": "FCO",
+      "destination": "CDG",
+      "scheduled_departure": "2026-09-25T18:30:00+02:00",
+      "scheduled_arrival": "2026-09-25T20:45:00+02:00",
+      "distance_km": 1105
+    }
+  },
+  {
+    "passenger": {
+      "id": "P-002",
+      "name": "Sophie Martin",
+      "contact": "sophie.martin@example.com",
+      "special_needs": []
+    },
+    "booking": {
+      "booking_ref": "BRT9Q7",
+      "flight_no": "AU224",
+      "origin": "CDG",
+      "destination": "LIS",
+      "scheduled_departure": "2026-09-25T07:10:00+02:00",
+      "scheduled_arrival": "2026-09-25T08:55:00+01:00",
+      "distance_km": 1455
+    }
+  },
+  {
+    "passenger": {
+      "id": "P-003",
+      "name": "Lukas Weber",
+      "contact": "lukas.weber@example.com",
+      "special_needs": ["wheelchair assistance"]
+    },
+    "booking": {
+      "booking_ref": "KMW3P8",
+      "flight_no": "AU901",
+      "origin": "FCO",
+      "destination": "JFK",
+      "scheduled_departure": "2026-09-25T10:15:00+02:00",
+      "scheduled_arrival": "2026-09-25T14:05:00-04:00",
+      "distance_km": 6880
+    }
+  }
+]
