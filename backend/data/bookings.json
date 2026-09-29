@@ -11,8 +11,8 @@
       "flight_no": "AU610",
       "origin": "FCO",
       "destination": "CDG",
-      "scheduled_departure": "2026-09-25T18:30:00+02:00",
-      "scheduled_arrival": "2026-09-25T20:45:00+02:00",
+      "departure_offset_minutes": 60,
+      "duration_minutes": 135,
       "distance_km": 1105
     }
   },
@@ -28,8 +28,8 @@
       "flight_no": "AU224",
       "origin": "CDG",
       "destination": "LIS",
-      "scheduled_departure": "2026-09-25T07:10:00+02:00",
-      "scheduled_arrival": "2026-09-25T08:55:00+01:00",
+      "departure_offset_minutes": -30,
+      "duration_minutes": 165,
       "distance_km": 1455
     }
   },
@@ -45,8 +45,8 @@
       "flight_no": "AU901",
       "origin": "FCO",
       "destination": "JFK",
-      "scheduled_departure": "2026-09-25T10:15:00+02:00",
-      "scheduled_arrival": "2026-09-25T14:05:00-04:00",
+      "departure_offset_minutes": -60,
+      "duration_minutes": 590,
       "distance_km": 6880
     }
   }

@@ -1,0 +1,23 @@
+[
+  {
+    "flight_no": "AU610",
+    "type": "cancellation",
+    "announced_offset_minutes": -30,
+    "stated_cause": "Technical fault: hydraulic system issue found during the pre-flight inspection. Aircraft grounded for repairs.",
+    "expected_delay_minutes": null
+  },
+  {
+    "flight_no": "AU224",
+    "type": "delay",
+    "announced_offset_minutes": -120,
+    "stated_cause": "Severe thunderstorms over Paris Charles de Gaulle. Air traffic control has suspended departures.",
+    "expected_delay_minutes": 300
+  },
+  {
+    "flight_no": "AU901",
+    "type": "cancellation",
+    "announced_offset_minutes": -180,
+    "stated_cause": "Industrial action by Aurora Airways cabin crew. Insufficient crew available to operate the flight.",
+    "expected_delay_minutes": null
+  }
+]

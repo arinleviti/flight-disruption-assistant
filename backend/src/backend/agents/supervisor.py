@@ -2,16 +2,24 @@ from backend.models.chat import Message, ChatRequest
 from pathlib import Path
 import litellm
 from backend.tools.get_booking import GET_BOOKING_TOOL, get_booking
+from backend.tools.get_disruption import GET_DISRUPTION_TOOL, get_disruption
+from backend.tools.get_disruption import get_disruption
 import json
 
-MODEL = "groq/openai/gpt-oss-120b"
+MODEL = "gemini/gemini-3.8-flash"
+FALLBACK_MODELS = [
+    "gemini/gemini-3.5-flash-lite",
+    "groq/openai/gpt-oss-120b",
+]
+NUM_RETRIES = 1
 MAX_TOOL_ROUNDS = 8  # safety limit: stop if the model keeps calling tools
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "supervisor_system.md"
 SUPERVISOR_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
-TOOL_SCHEMAS = [GET_BOOKING_TOOL]
+TOOL_SCHEMAS = [GET_BOOKING_TOOL, GET_DISRUPTION_TOOL]  # the model sees these tools and can call them
 
 TOOL_FUNCTIONS = {
     "get_booking": get_booking,
+    "get_disruption": get_disruption,
 }
 
 def run_tool(name: str, arguments_json: str) -> dict:
@@ -47,7 +55,9 @@ def answer_request(message:str, history: list[Message] | None = None) -> str:
             response = litellm.completion(
                 model=MODEL,
                 messages= messages,
-                tools= TOOL_SCHEMAS   
+                tools= TOOL_SCHEMAS,
+                num_retries=NUM_RETRIES,
+                fallbacks=FALLBACK_MODELS,   
             )
         except litellm.BadRequestError as e:
            # Groq rejects calls to tools that weren't sent in TOOL_SCHEMAS.

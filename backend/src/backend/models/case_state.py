@@ -24,10 +24,11 @@ class OriginalBooking(BaseModel):
 
 
 class Disruption(BaseModel):
+    flight_no: str
     type: Literal["cancellation", "delay"]
     announced_at: datetime
     stated_cause: str | None = None          # from the airline's disruption record
-    expected_delay_hours: float | None = None
+    expected_delay_minutes: float | None = None
 
 
 # ---------- Rebooking (filled by the rebooking agent + passenger's choice) ----------
@@ -37,9 +38,9 @@ class FlightOption(BaseModel):
     flight_no: str
     origin: str
     destination: str
+    via: str | None = None   # connection airport, if any
     departure: datetime
     arrival: datetime
-    stops: list[str] = Field(default_factory=list)   # connection airports, if any
 
 
 class Rebooking(BaseModel):

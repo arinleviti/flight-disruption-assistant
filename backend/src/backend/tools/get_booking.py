@@ -2,6 +2,7 @@ from backend.models.case_state import OriginalBooking, Passenger
 import json
 import hashlib
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 
 DATA_PATH = Path(__file__).resolve().parent.parent.parent.parent / "data" / "bookings.json"
 
@@ -11,7 +12,11 @@ def pick_record(ref: str, records: list[dict]) -> dict:
             return record
     digest = hashlib.sha256(ref.encode("utf-8")).hexdigest()
     return records[int(digest, 16) % len(records)]
-    
+
+def convert_offset_to_time(minutes_offset: int) -> datetime:
+    timenow = datetime.now(timezone.utc)
+    scheduled_time = timenow + timedelta(minutes=minutes_offset)
+    return scheduled_time
 
 def get_booking(booking_ref: str) -> dict:
     ref = booking_ref.strip().upper()
@@ -26,8 +31,16 @@ def get_booking(booking_ref: str) -> dict:
     # with model_validate you can pass a whole object
     passenger = Passenger.model_validate(record["passenger"])
    
-    booking_data = dict(record["booking"])     # copy the booking
+    booking_data = dict(record["booking"])     # copy the booking  
+
     booking_data["booking_ref"] = ref          # use the reference the visitor typed
+    # .pop() removes a key from a dictionary and gives you its value, in one step
+    departure = convert_offset_to_time(booking_data.pop("departure_offset_minutes"))
+    duration =  booking_data.pop("duration_minutes")
+
+    booking_data["scheduled_departure"] = departure
+    booking_data["scheduled_arrival"] = departure + timedelta(minutes=duration)
+
     booking = OriginalBooking.model_validate(booking_data)
 
     return {

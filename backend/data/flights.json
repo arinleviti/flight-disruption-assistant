@@ -1,0 +1,18 @@
+[
+  { "flight_id": "F-001", "flight_no": "AU612",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_offset_minutes": 180,  "duration_minutes": 135, "seats_available": 0 },
+  { "flight_id": "F-002", "flight_no": "AU614",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_offset_minutes": 330,  "duration_minutes": 135, "seats_available": 4 },
+  { "flight_id": "F-003", "flight_no": "AU616",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_offset_minutes": 900,  "duration_minutes": 135, "seats_available": 38 },
+  { "flight_id": "F-004", "flight_no": "AU402/AU431", "origin": "FCO", "destination": "CDG", "via": "MXP", "departure_offset_minutes": 150,  "duration_minutes": 285, "seats_available": 9 },
+  { "flight_id": "F-005", "flight_no": "AU608",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_offset_minutes": -240, "duration_minutes": 135, "seats_available": 12 },
+
+  { "flight_id": "F-006", "flight_no": "AU226",       "origin": "CDG", "destination": "LIS", "via": null,  "departure_offset_minutes": 240,  "duration_minutes": 165, "seats_available": 7 },
+  { "flight_id": "F-007", "flight_no": "AU240/AU517", "origin": "CDG", "destination": "LIS", "via": "MAD", "departure_offset_minutes": 90,   "duration_minutes": 300, "seats_available": 15 },
+  { "flight_id": "F-008", "flight_no": "AU228",       "origin": "CDG", "destination": "LIS", "via": null,  "departure_offset_minutes": 780,  "duration_minutes": 165, "seats_available": 40 },
+
+  { "flight_id": "F-009", "flight_no": "AU903",       "origin": "FCO", "destination": "JFK", "via": null,  "departure_offset_minutes": 1320, "duration_minutes": 590, "seats_available": 22 },
+  { "flight_id": "F-010", "flight_no": "AU410/AU161", "origin": "FCO", "destination": "JFK", "via": "LHR", "departure_offset_minutes": 240,  "duration_minutes": 780, "seats_available": 6 },
+  { "flight_id": "F-011", "flight_no": "AU452/AU171", "origin": "FCO", "destination": "JFK", "via": "FRA", "departure_offset_minutes": 180,  "duration_minutes": 750, "seats_available": 1 },
+  { "flight_id": "F-012", "flight_no": "AU905",       "origin": "FCO", "destination": "JFK", "via": null,  "departure_offset_minutes": 2760, "duration_minutes": 590, "seats_available": 30 },
+
+  { "flight_id": "F-013", "flight_no": "AU330",       "origin": "FCO", "destination": "LIS", "via": null,  "departure_offset_minutes": 200,  "duration_minutes": 170, "seats_available": 20 }
+]
