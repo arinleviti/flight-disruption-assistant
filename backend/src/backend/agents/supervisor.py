@@ -43,11 +43,27 @@ def answer_request(message:str, history: list[Message] | None = None) -> str:
 
     #range() generates a sequence of numbers for a loop.
     for _ in range(MAX_TOOL_ROUNDS):
-        response = litellm.completion(
+        try:
+            response = litellm.completion(
                 model=MODEL,
                 messages= messages,
                 tools= TOOL_SCHEMAS   
             )
+        except litellm.BadRequestError as e:
+           # Groq rejects calls to tools that weren't sent in TOOL_SCHEMAS.
+            # Tell the model and let it try again, instead of crashing.
+            if "tool_use_failed" in str(e):
+                print(f"UNAVAILABLE TOOL ATTEMPTED: {e}")
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "You tried to call a tool that isn't available. Use only the tools "
+                        "you were given, or answer the passenger directly."
+                    ),
+                })
+                continue
+            # Any other bad request is a real bug: let it crash so we see it
+            raise
         reply= response.choices[0].message
 
         # No tool requested: the model has answered, we're done
