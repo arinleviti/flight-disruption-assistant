@@ -31,7 +31,7 @@ def get_disruption(flight_no: str) -> dict:
 
     # Validate last, once the data has the right shape
     disruption = Disruption.model_validate(disruption_data)
-
+    # this returns a Python dictionary. RIght before, disruption was a Pydantic model.
     return disruption.model_dump(mode="json")
 
 GET_DISRUPTION_TOOL = {

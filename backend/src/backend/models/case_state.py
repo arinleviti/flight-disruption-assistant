@@ -42,11 +42,16 @@ class FlightOption(BaseModel):
     departure: datetime
     arrival: datetime
 
-
 class Rebooking(BaseModel):
     options_offered: list[FlightOption] = Field(default_factory=list)
     rejected_count: int = 0
     confirmed: FlightOption | None = None
+
+class RebookingResult(BaseModel):
+    """The shape of the agent's final answer, as described in its prompt."""
+    options: list[FlightOption]
+    recommended_flight_id: str | None
+    reason: str
 
 
 # ---------- Compensation (filled by the compensation agent) ----------

@@ -6,9 +6,19 @@ from fastapi import FastAPI
 from backend.models.chat import Message, ChatRequest, ChatResponse
 from backend.agents.supervisor import answer_request
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+from backend.db.inventory import build_inventory_db
 
 load_dotenv()
-app= FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Runs once when the server starts
+    build_inventory_db()
+    yield
+    # Anything after yield runs once when the server stops (nothing needed yet)
+    
+app= FastAPI(lifespan=lifespan)
 
 conversations: dict[str, list[Message]] = {}
 

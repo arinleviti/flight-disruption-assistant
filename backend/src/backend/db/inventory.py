@@ -1,0 +1,79 @@
+import json
+import sqlite3
+from datetime import timedelta
+from pathlib import Path
+
+from backend.tools.get_booking import convert_offset_to_time
+
+# this turns your hand-written flights.json 
+# into a database table the agent can search with SQL, with every flight's times recalculated for right now.
+# backend/src/backend/db/inventory.py -> parents[3] is the backend root folder
+DATA_DIR = Path(__file__).resolve().parents[3] / "data"
+FLIGHTS_PATH = DATA_DIR / "flights.json"
+DB_PATH = DATA_DIR / "inventory.db"
+
+# SQLite's own date format, so that comparisons with datetime('now') work
+SQLITE_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def build_inventory_db() -> None:
+    """Rebuild the flight inventory database from flights.json.
+
+    Runs at every server start: times are stored relative to "now" in the
+    JSON, so they are recalculated each time and the demo always shows
+    flights for today and tomorrow.
+    """
+    conn = sqlite3.connect(DB_PATH)
+
+    # Start fresh on every build
+    conn.execute("DROP VIEW IF EXISTS available_flights")
+    conn.execute("DROP TABLE IF EXISTS flights")
+
+    conn.execute("""
+        CREATE TABLE flights (
+            flight_id       TEXT PRIMARY KEY,
+            flight_no       TEXT NOT NULL,
+            origin          TEXT NOT NULL,
+            destination     TEXT NOT NULL,
+            via             TEXT,
+            departure       TEXT NOT NULL,
+            arrival         TEXT NOT NULL,
+            seats_available INTEGER NOT NULL
+        )
+    """)
+
+    flights = json.loads(FLIGHTS_PATH.read_text(encoding="utf-8"))
+
+    rows = []
+    for flight in flights:
+        departure = convert_offset_to_time(flight["departure_offset_minutes"])
+        arrival = departure + timedelta(minutes=flight["duration_minutes"])
+
+        rows.append((
+            flight["flight_id"],
+            flight["flight_no"],
+            flight["origin"],
+            flight["destination"],
+            flight["via"],                                   # None for direct flights
+            departure.strftime(SQLITE_DATE_FORMAT),
+            arrival.strftime(SQLITE_DATE_FORMAT),
+            flight["seats_available"],
+        ))
+
+    conn.executemany(
+        "INSERT INTO flights VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        rows,
+    )
+
+    # The only thing the rebooking agent is allowed to query:
+    # flights that haven't left yet and still have seats
+    conn.execute("""
+        CREATE VIEW available_flights AS
+        SELECT flight_id, flight_no, origin, destination, via, departure, arrival, seats_available
+        FROM flights
+        WHERE departure > datetime('now')
+          AND seats_available > 0
+    """)
+
+    conn.commit()
+    conn.close()
