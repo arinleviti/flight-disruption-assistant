@@ -1,11 +1,12 @@
 from backend.models.case_state import RebookingResult
 from pathlib import Path
 import litellm
-from backend.tools.run_flight_query import RUN_FLIGHT_QUERY_TOOL, run_flight_query
+from backend.tools.search_flights import SEARCH_FLIGHTS_TOOL, search_flights
+from backend.tools.time_utils import current_local_time, to_local_time
 import json
 from pydantic import ValidationError
 
-MODEL = "groq/openai/gpt-oss-120b",
+MODEL = "groq/openai/gpt-oss-120b"
 FALLBACK_MODELS = [
     "gemini/gemini-3.5-flash-lite",
     "gemini/gemini-3.8-flash"
@@ -14,10 +15,10 @@ NUM_RETRIES = 0
 MAX_TOOL_ROUNDS = 4  # safety limit: stop if the model keeps calling tools
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "rebooking_system.md"
 REBOOKING_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
-TOOL_SCHEMAS = [RUN_FLIGHT_QUERY_TOOL]  # the model sees these tools and can call them
+TOOL_SCHEMAS = [SEARCH_FLIGHTS_TOOL]  # the model sees these tools and can call them
 
 TOOL_FUNCTIONS = {
-    "run_flight_query": run_flight_query,
+    "search_flights": search_flights,
 }
 
 history = []
@@ -39,6 +40,19 @@ def run_tool(name: str, arguments_json: str) -> dict:
     except Exception as e:
         return {"error": f"Tool '{name}' failed: {e}"}
 
+def add_local_times(result: RebookingResult) -> dict:
+    # The agent copies UTC times into its answer. Passengers need the time
+    # on the clocks at each airport, so the conversion is done here in code, never by the model.
+    data = result.model_dump(mode="json")
+
+    # zip walks through both lists side by side: the dict to add fields to,
+    # and the original FlightOption, which still has real datetimes to convert
+    for option, flight in zip(data["options"], result.options):
+        option["departure_local"] = to_local_time(flight.departure, flight.origin)
+        option["arrival_local"] = to_local_time(flight.arrival, flight.destination)
+
+    return data
+
 def get_flights_options(origin: str, destination: str, disrupted_flight_no: str, preferences: str = "", special_needs: str = "") -> dict:
     origin_clean = origin.strip().upper()
     destination_clean = destination.strip().upper()
@@ -56,6 +70,9 @@ def get_flights_options(origin: str, destination: str, disrupted_flight_no: str,
 
     if not parameters["origin"] or not parameters["destination"] or not parameters["disrupted_flight_no"]:
         return {"error": "origin, destination and disrupted_flight_no are required."}
+
+    # Lets the model turn "tonight" or "tomorrow morning" into real dates, in local time
+    parameters["current_local_time_at_origin"] = current_local_time(origin_clean)
 
     parameters_json = json.dumps(parameters, ensure_ascii=False)
 
@@ -97,8 +114,8 @@ def get_flights_options(origin: str, destination: str, disrupted_flight_no: str,
                     ),
                 })
                 continue
-            # A plain dict: the supervisor's json.dumps turns it into text for its model.
-            return answer.model_dump(mode="json")
+            # A plain dict with local times added: the supervisor's json.dumps turns it into text for its model.
+            return add_local_times(answer)
 
         messages.append({
             "role": "assistant",
@@ -132,7 +149,8 @@ REBOOKING_AGENT_TOOL = {
         "name": "rebooking_agent",
         "description": (
             "Specialist agent that searches the airline's flight inventory for alternatives to a "
-            "disrupted flight and returns up to 3 options, a recommended flight and a short reason. "
+            "disrupted flight and returns up to 3 options with local departure and arrival times, "
+            "a recommended flight and a short reason. "
             "Call it once you have the booking and the disruption. Pass the passenger's preferences "
             "in their own words if they gave any, and their special needs from the booking. "
             "Call it again with updated preferences if the passenger rejects the options."
