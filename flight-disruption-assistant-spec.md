@@ -431,3 +431,16 @@ dict ──── model_validate ────► Pydantic object (dot access, ch
    ▼
 text (sent to the model)
 ```
+
+
+1. The memory bug (flight_id)
+The passenger said "yes, book it," and the agent replied that the flight was "no longer available," without calling any tool. The logs showed why: the conversation history kept only the passenger's messages and the assistant's replies, so every tool result vanished between turns. The model had seen "AU614 at 16:17" in text, but never the flight_id it needed to book, so it invented a failure. I fixed it with a case file: code saves the facts from each tool result and shows them to the model at the start of every turn. The lesson: an agent's memory has to be designed; chat history alone loses the facts.
+
+2. Text-to-SQL replaced by a parameterized tool
+I first built flight search as text-to-SQL, with the rebooking agent writing its own SELECT against a read-only view, guarded by validation and row limits. Then I noticed every query followed the same pattern, filtering on a handful of fields. I replaced it with search_flights, where the model only fills in values and the SQL is pre-written with placeholders. It's safer, more predictable, and lets the tool convert local times to UTC in code, which is the date arithmetic models get wrong. Text-to-SQL is kept for an ops console, where questions really are open-ended.
+
+3. Over-filtering: requirements vs preferences
+A passenger said "I prefer a direct flight, but I can connect." The agent searched with direct_only: true and a narrow time window, found two flights, and hid every option the passenger had said was acceptable. The bug was in the reasoning, not the code: it treated a preference as a requirement. I rewrote the agent's prompt around that distinction: requirements become search filters, preferences become ranking. The next search returned six options, directs ranked first, connections last.
+
+4. The invented json tool caught by the fallback
+During the compensation agent's evaluation, the model (gpt-oss) tried to deliver its final answer by calling a tool named json, which doesn't exist. The provider rejected the request, but the answer inside was correct, just sent the wrong way. Because every LLM call had a cross-provider fallback, the request went to Gemini, which answered properly, and the case still passed. It's a concrete example of why reliability is built into the system, not hoped for from the model: models fail in strange ways, and the architecture has to absorb it.

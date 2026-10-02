@@ -5,7 +5,9 @@ import litellm
 from backend.tools.get_booking import GET_BOOKING_TOOL, get_booking
 from backend.tools.get_disruption import GET_DISRUPTION_TOOL, get_disruption
 from backend.agents.rebooking_agent import REBOOKING_AGENT_TOOL, get_flights_options
+from backend.agents.compensation_agent import COMPENSATION_AGENT_TOOL, compensation_agent
 from backend.tools.record_rebooking import RECORD_REBOOKING_TOOL, record_rebooking
+from backend.tools.close_case import CLOSE_CASE_TOOL, close_case
 import json
 from backend.state.case_file import case_file_summary, update_case_file
 
@@ -18,7 +20,14 @@ NUM_RETRIES = 0
 MAX_TOOL_ROUNDS = 8  # safety limit: stop if the model keeps calling tools
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "supervisor_system.md"
 SUPERVISOR_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
-TOOL_SCHEMAS = [GET_BOOKING_TOOL, GET_DISRUPTION_TOOL, REBOOKING_AGENT_TOOL, RECORD_REBOOKING_TOOL]  # the model sees these tools and can call them
+TOOL_SCHEMAS = [
+    GET_BOOKING_TOOL,
+    GET_DISRUPTION_TOOL,
+    REBOOKING_AGENT_TOOL,
+    RECORD_REBOOKING_TOOL,
+    COMPENSATION_AGENT_TOOL,
+    CLOSE_CASE_TOOL,
+]  # the model sees these tools and can call them
 
 # Keys must match the "name" in each tool schema; values are the Python functions to run.
 TOOL_FUNCTIONS = {
@@ -26,12 +35,25 @@ TOOL_FUNCTIONS = {
     "get_disruption": get_disruption,
     "rebooking_agent": get_flights_options,
     "record_rebooking": record_rebooking,
+    "compensation_agent": compensation_agent,
+    "close_case": close_case,
 }
+
+# Tools that read everything from the case file: the model passes no arguments,
+# and the code hands them the case instead.
+CASE_TOOLS = {"compensation_agent", "close_case"}
 
 def run_tool(name: str, arguments_json: str, case: CaseState) -> dict:
     function = TOOL_FUNCTIONS.get(name)
     if function is None:
         return {"error": f"Unknown tool '{name}'. Use only the tools you were given."}
+
+    # Case-file tools: ignore whatever arguments the model sent, pass the case itself
+    if name in CASE_TOOLS:
+        try:
+            return function(case)
+        except Exception as e:
+            return {"error": f"Tool '{name}' failed: {e}"}
 
     try:
         # It turns the model's arguments from text into a Python dictionary. from '{"booking_ref": "1254RF"}' to {"booking_ref": "1254RF"}

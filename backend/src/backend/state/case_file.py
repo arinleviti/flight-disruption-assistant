@@ -1,5 +1,6 @@
 from backend.models.case_state import (
     CaseState,
+    Compensation,
     Disruption,
     FlightOption,
     OriginalBooking,
@@ -51,6 +52,25 @@ def update_case_file(case: CaseState, tool_name: str, result: dict) -> None:
             f"({case.rebooking.confirmed.flight_id})"
         )
 
+    elif tool_name == "compensation_agent":
+        # The agent's reasoning and the calculator's rule are kept together,
+        # so the case file says both why and on what basis
+        case.compensation = Compensation(
+            eligible=result["eligible"],
+            amount_eur=result["amount_eur"],
+            is_extraordinary=result["is_extraordinary"],
+            reasoning=f"{result['reasoning']} {result['rule_applied']}",
+            sources=result.get("sources", []),
+        )
+        print(
+            f"CASE FILE: saved compensation {case.compensation.amount_eur} EUR "
+            f"(extraordinary: {case.compensation.is_extraordinary})"
+        )
+
+    elif tool_name == "close_case":
+        case.status = "closed"
+        print(f"CASE FILE: case {case.case_id} closed")
+
 
 def case_file_summary(case: CaseState) -> str:
     """Turn the case file into a short note the model reads at the start of every turn."""
@@ -58,6 +78,14 @@ def case_file_summary(case: CaseState) -> str:
         "CASE FILE: facts already recorded in this conversation. "
         "Use them instead of calling the same tools again."
     ]
+
+    if case.status == "closed":
+        lines.append(
+            "Case status: CLOSED. Everything is settled. Answer the passenger's questions from "
+            "the facts below; don't search, book or reassess anything."
+        )
+    else:
+        lines.append(f"Case status: {case.status}")
 
     if case.original_booking and case.passenger:
         booking = case.original_booking
@@ -108,5 +136,19 @@ def case_file_summary(case: CaseState) -> str:
         )
     else:
         lines.append("Confirmed new flight: none yet")
+
+    if case.compensation:
+        compensation = case.compensation
+        if compensation.eligible:
+            outcome = f"owed {compensation.amount_eur} EUR"
+        else:
+            outcome = "no compensation owed"
+        lines.append(
+            f"Compensation: already assessed, {outcome} "
+            f"(extraordinary circumstances: {'yes' if compensation.is_extraordinary else 'no'}). "
+            f"Reason: {compensation.reasoning} Do not call compensation_agent again."
+        )
+    else:
+        lines.append("Compensation: not assessed yet")
 
     return "\n".join(lines)
