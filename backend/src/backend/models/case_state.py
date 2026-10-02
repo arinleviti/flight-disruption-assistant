@@ -98,14 +98,19 @@ class Escalation(BaseModel):
     at: datetime
 
 
-# ---------- The case state itself ----------
+# ---------- The case file itself ----------
 
 class CaseState(BaseModel):
+    """Everything known about one passenger's case, kept for the whole conversation.
+
+    It starts almost empty and fills up as tools return results:
+    booking -> disruption -> options offered -> confirmed flight -> ...
+    """
     case_id: str
     status: Literal["open", "escalated", "closed"] = "open"
-    passenger: Passenger
-    original_booking: OriginalBooking
-    disruption: Disruption
+    passenger: Passenger | None = None
+    original_booking: OriginalBooking | None = None
+    disruption: Disruption | None = None
     rebooking: Rebooking = Field(default_factory=Rebooking)
     compensation: Compensation | None = None
     care: Care = Field(default_factory=Care)

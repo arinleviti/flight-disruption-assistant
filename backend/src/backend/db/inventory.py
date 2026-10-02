@@ -5,8 +5,6 @@ from pathlib import Path
 
 from backend.tools.get_booking import convert_offset_to_time
 
-# this turns your hand-written flights.json 
-# into a database table the agent can search with SQL, with every flight's times recalculated for right now.
 # backend/src/backend/db/inventory.py -> parents[3] is the backend root folder
 DATA_DIR = Path(__file__).resolve().parents[3] / "data"
 FLIGHTS_PATH = DATA_DIR / "flights.json"
@@ -21,12 +19,13 @@ def build_inventory_db() -> None:
 
     Runs at every server start: times are stored relative to "now" in the
     JSON, so they are recalculated each time and the demo always shows
-    flights for today and tomorrow.
+    flights for today and tomorrow. Rebookings start empty on every build.
     """
     conn = sqlite3.connect(DB_PATH)
 
-    # Start fresh on every build
+    # Start fresh on every build (the view first, since it depends on the flights table)
     conn.execute("DROP VIEW IF EXISTS available_flights")
+    conn.execute("DROP TABLE IF EXISTS rebookings")
     conn.execute("DROP TABLE IF EXISTS flights")
 
     conn.execute("""
@@ -39,6 +38,19 @@ def build_inventory_db() -> None:
             departure       TEXT NOT NULL,
             arrival         TEXT NOT NULL,
             seats_available INTEGER NOT NULL
+        )
+    """)
+
+    # One row per confirmed rebooking. booking_ref is the primary key,
+    # so a booking can only ever have one rebooking.
+    # In the same file as flights, so taking a seat and saving the rebooking
+    # can happen in one transaction: both succeed or neither does.
+    conn.execute("""
+        CREATE TABLE rebookings (
+            booking_ref TEXT PRIMARY KEY,
+            flight_id   TEXT NOT NULL,
+            flight_no   TEXT NOT NULL,
+            booked_at   TEXT NOT NULL
         )
     """)
 
@@ -65,8 +77,7 @@ def build_inventory_db() -> None:
         rows,
     )
 
-    # The only thing the rebooking agent is allowed to query:
-    # flights that haven't left yet and still have seats
+    # Flights that haven't left yet and still have seats
     conn.execute("""
         CREATE VIEW available_flights AS
         SELECT flight_id, flight_no, origin, destination, via, departure, arrival, seats_available

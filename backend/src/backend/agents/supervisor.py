@@ -1,12 +1,15 @@
-from backend.models.chat import Message, ChatRequest
+from backend.models.chat import Message
+from backend.models.case_state import CaseState
 from pathlib import Path
 import litellm
 from backend.tools.get_booking import GET_BOOKING_TOOL, get_booking
 from backend.tools.get_disruption import GET_DISRUPTION_TOOL, get_disruption
 from backend.agents.rebooking_agent import REBOOKING_AGENT_TOOL, get_flights_options
+from backend.tools.record_rebooking import RECORD_REBOOKING_TOOL, record_rebooking
 import json
+from backend.state.case_file import case_file_summary, update_case_file
 
-MODEL = "groq/openai/gpt-oss-120b",
+MODEL = "groq/openai/gpt-oss-120b"
 FALLBACK_MODELS = [
     "gemini/gemini-3.5-flash-lite",
     "gemini/gemini-3.8-flash"
@@ -15,16 +18,17 @@ NUM_RETRIES = 0
 MAX_TOOL_ROUNDS = 8  # safety limit: stop if the model keeps calling tools
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "supervisor_system.md"
 SUPERVISOR_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
-TOOL_SCHEMAS = [GET_BOOKING_TOOL, GET_DISRUPTION_TOOL, REBOOKING_AGENT_TOOL]  # the model sees these tools and can call them
+TOOL_SCHEMAS = [GET_BOOKING_TOOL, GET_DISRUPTION_TOOL, REBOOKING_AGENT_TOOL, RECORD_REBOOKING_TOOL]  # the model sees these tools and can call them
 
 # Keys must match the "name" in each tool schema; values are the Python functions to run.
 TOOL_FUNCTIONS = {
     "get_booking": get_booking,
     "get_disruption": get_disruption,
     "rebooking_agent": get_flights_options,
+    "record_rebooking": record_rebooking,
 }
 
-def run_tool(name: str, arguments_json: str) -> dict:
+def run_tool(name: str, arguments_json: str, case: CaseState) -> dict:
     function = TOOL_FUNCTIONS.get(name)
     if function is None:
         return {"error": f"Unknown tool '{name}'. Use only the tools you were given."}
@@ -41,12 +45,17 @@ def run_tool(name: str, arguments_json: str) -> dict:
     except Exception as e:
         return {"error": f"Tool '{name}' failed: {e}"}
 
-def answer_request(message: str, history: list[Message] | None = None) -> str:
+def answer_request(message: str, history: list[Message] | None = None, case: CaseState | None = None) -> str:
 
     if history is None:
         history = []
 
+    if case is None:
+        case = CaseState(case_id="no-session")
+
     messages: list[dict] = [{"role": "system", "content": SUPERVISOR_PROMPT}]
+    # The case file: facts from earlier tool results, which the history doesn't contain
+    messages.append({"role": "system", "content": case_file_summary(case)})
     messages.extend([m.model_dump() for m in history])
 
     messages.append({"role": "user", "content": message})
@@ -98,9 +107,10 @@ def answer_request(message: str, history: list[Message] | None = None) -> str:
                 for call in reply.tool_calls
             ],
         })
-        # ...then run each tool and add its result, linked by the call id
+        # ...then run each tool, save its facts to the case file, and add its result
         for call in reply.tool_calls:
-            result = run_tool(call.function.name, call.function.arguments)
+            result = run_tool(call.function.name, call.function.arguments, case)
+            update_case_file(case, call.function.name, result)
             print(f"TOOL CALL: {call.function.name}({call.function.arguments}) -> {result}")
             messages.append({
                 "role": "tool",
@@ -108,6 +118,6 @@ def answer_request(message: str, history: list[Message] | None = None) -> str:
                 "content": json.dumps(result, ensure_ascii=False)  #here we turn the Py dictionary result into a string, so the model can read it. For example, {"error": "The flight number is empty."} becomes '{"error": "The flight number is empty."}'
             })
 
-    # Loop back: the model now sees the results and continues
+        # Loop back: the model now sees the results and continues
 
     return "I'm sorry, I'm having trouble completing this right now. Let me connect you with a colleague."
