@@ -1,4 +1,5 @@
 from backend.models.case_state import OriginalBooking, Passenger
+from backend.tools.time_utils import local_day_time_to_utc
 import json
 import hashlib
 from pathlib import Path
@@ -23,20 +24,30 @@ def get_booking(booking_ref: str) -> dict:
     if not ref:
         return {"error": "The booking reference is empty. Ask the passenger for it."}
     #read_text() reads the file into a string, and json.loads() converts that JSON string into native Python objects.
-    
+
     records = json.loads(DATA_PATH.read_text(encoding="utf-8"))
     record = pick_record(ref, records)
 
     #pydantic models can't take a dictionary directly, it only accepts named arguments Passenger(id="P-001", name="Marco Rossi", contact="...", special_needs=[])
     # with model_validate you can pass a whole object
     passenger = Passenger.model_validate(record["passenger"])
-   
-    booking_data = dict(record["booking"])     # copy the booking  
 
+    booking_data = dict(record["booking"])     # copy the booking
     booking_data["booking_ref"] = ref          # use the reference the visitor typed
+
+    # The departure is written in one of two ways:
+    # - "departure_offset_minutes": minutes from now
+    # - "departure_day" + "departure_time": a day (0 = today) and a local time at the origin
     # .pop() removes a key from a dictionary and gives you its value, in one step
-    departure = convert_offset_to_time(booking_data.pop("departure_offset_minutes"))
-    duration =  booking_data.pop("duration_minutes")
+    if "departure_offset_minutes" in booking_data:
+        departure = convert_offset_to_time(booking_data.pop("departure_offset_minutes"))
+    else:
+        departure = local_day_time_to_utc(
+            booking_data.pop("departure_day"),
+            booking_data.pop("departure_time"),
+            booking_data["origin"],
+        )
+    duration = booking_data.pop("duration_minutes")
 
     booking_data["scheduled_departure"] = departure
     booking_data["scheduled_arrival"] = departure + timedelta(minutes=duration)

@@ -10,11 +10,13 @@ from backend.agents.supervisor import answer_request
 
 from contextlib import asynccontextmanager
 from backend.db.inventory import build_inventory_db
+from backend.rag.knowledge_base import build_knowledge_base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Runs once when the server starts
     build_inventory_db()
+    build_knowledge_base()
     yield
     # Anything after yield runs once when the server stops (nothing needed yet)
     

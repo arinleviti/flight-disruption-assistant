@@ -4,6 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from backend.tools.get_booking import convert_offset_to_time
+from backend.tools.time_utils import local_day_time_to_utc
 
 # backend/src/backend/db/inventory.py -> parents[3] is the backend root folder
 DATA_DIR = Path(__file__).resolve().parents[3] / "data"
@@ -17,9 +18,12 @@ SQLITE_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 def build_inventory_db() -> None:
     """Rebuild the flight inventory database from flights.json.
 
-    Runs at every server start: times are stored relative to "now" in the
-    JSON, so they are recalculated each time and the demo always shows
-    flights for today and tomorrow. Rebookings start empty on every build.
+    Runs at every server start. A flight's departure is written in one of two ways:
+    - "departure_offset_minutes": minutes from now (for scenarios that must always
+      happen soon, like a full flight or one that just left)
+    - "departure_day" + "departure_time": a day (0 = today, 1 = tomorrow...) and a
+      local time at the origin airport, so "tomorrow at 07:15" is always morning.
+    Rebookings start empty on every build.
     """
     conn = sqlite3.connect(DB_PATH)
 
@@ -58,7 +62,12 @@ def build_inventory_db() -> None:
 
     rows = []
     for flight in flights:
-        departure = convert_offset_to_time(flight["departure_offset_minutes"])
+        if "departure_offset_minutes" in flight:
+            departure = convert_offset_to_time(flight["departure_offset_minutes"])
+        else:
+            departure = local_day_time_to_utc(
+                flight["departure_day"], flight["departure_time"], flight["origin"]
+            )
         arrival = departure + timedelta(minutes=flight["duration_minutes"])
 
         rows.append((

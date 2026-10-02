@@ -19,5 +19,40 @@
     "announced_offset_minutes": -180,
     "stated_cause": "Industrial action by Aurora Airways cabin crew. Insufficient crew available to operate the flight.",
     "expected_delay_minutes": null
+  },
+  {
+    "flight_no": "AU630",
+    "type": "cancellation",
+    "announced_offset_minutes": -60,
+    "stated_cause": "Schedule change: the flight has been withdrawn from the winter timetable.",
+    "expected_delay_minutes": null
+  },
+  {
+    "flight_no": "AU640",
+    "type": "cancellation",
+    "announced_offset_minutes": -60,
+    "stated_cause": "Schedule change: the route has been consolidated into another daily departure.",
+    "expected_delay_minutes": null
+  },
+  {
+    "flight_no": "AU256",
+    "type": "cancellation",
+    "announced_offset_minutes": -45,
+    "stated_cause": "Strike by French air traffic controllers. The authorities have ordered airlines to reduce departures from Paris airports.",
+    "expected_delay_minutes": null
+  },
+  {
+    "flight_no": "AU909",
+    "type": "delay",
+    "announced_offset_minutes": -20,
+    "stated_cause": "Late arrival of the inbound aircraft, held for an unscheduled technical inspection at its previous airport.",
+    "expected_delay_minutes": 240
+  },
+  {
+    "flight_no": "AU606",
+    "type": "cancellation",
+    "announced_offset_minutes": -40,
+    "stated_cause": "Bird strike on landing during the aircraft's previous flight. Aircraft grounded for a mandatory inspection.",
+    "expected_delay_minutes": null
   }
 ]

@@ -39,6 +39,18 @@ def run_tool(name: str, arguments_json: str, case: CaseState) -> dict:
     except json.JSONDecodeError:
         return {"error": "The tool arguments were not valid JSON."}
 
+    # Guard: the booking is already in the case file, so don't look it up again.
+    # Return what's stored instead of running the tool (saves a call and tokens).
+    if name == "get_booking" and case.original_booking and case.passenger:
+        requested_ref = str(arguments.get("booking_ref", "")).strip().upper()
+        if requested_ref == case.original_booking.booking_ref:
+            print(f"GUARD: get_booking({requested_ref}) answered from the case file")
+            return {
+                "passenger": case.passenger.model_dump(mode="json"),
+                "booking": case.original_booking.model_dump(mode="json"),
+                "note": "Already in the case file; no need to call get_booking again.",
+            }
+
     try:
         # turns that dictionary into named arguments and calls the function. For example, if arguments is {"booking_ref": "1254RF"}, it will call get_booking(booking_ref="1254RF").
         return function(**arguments)

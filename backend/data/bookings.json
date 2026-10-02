@@ -1,53 +1,47 @@
 [
   {
-    "passenger": {
-      "id": "P-001",
-      "name": "Marco Rossi",
-      "contact": "marco.rossi@example.com",
-      "special_needs": []
-    },
-    "booking": {
-      "booking_ref": "AZX4K2",
-      "flight_no": "AU610",
-      "origin": "FCO",
-      "destination": "CDG",
-      "departure_offset_minutes": 60,
-      "duration_minutes": 135,
-      "distance_km": 1105
-    }
+    "passenger": { "id": "P-001", "name": "Marco Rossi", "contact": "marco.rossi@example.com", "special_needs": [] },
+    "booking": { "booking_ref": "AZX4K2", "flight_no": "AU610", "origin": "FCO", "destination": "CDG",
+                 "departure_offset_minutes": 60, "duration_minutes": 135, "distance_km": 1105 }
   },
   {
-    "passenger": {
-      "id": "P-002",
-      "name": "Sophie Martin",
-      "contact": "sophie.martin@example.com",
-      "special_needs": []
-    },
-    "booking": {
-      "booking_ref": "BRT9Q7",
-      "flight_no": "AU224",
-      "origin": "CDG",
-      "destination": "LIS",
-      "departure_offset_minutes": -30,
-      "duration_minutes": 165,
-      "distance_km": 1455
-    }
+    "passenger": { "id": "P-002", "name": "Sophie Martin", "contact": "sophie.martin@example.com", "special_needs": [] },
+    "booking": { "booking_ref": "BRT9Q7", "flight_no": "AU224", "origin": "CDG", "destination": "LIS",
+                 "departure_offset_minutes": -30, "duration_minutes": 165, "distance_km": 1455 }
   },
   {
-    "passenger": {
-      "id": "P-003",
-      "name": "Lukas Weber",
-      "contact": "lukas.weber@example.com",
-      "special_needs": ["wheelchair assistance"]
-    },
-    "booking": {
-      "booking_ref": "KMW3P8",
-      "flight_no": "AU901",
-      "origin": "FCO",
-      "destination": "JFK",
-      "departure_offset_minutes": -60,
-      "duration_minutes": 590,
-      "distance_km": 6880
-    }
+    "passenger": { "id": "P-003", "name": "Lukas Weber", "contact": "lukas.weber@example.com", "special_needs": ["wheelchair assistance"] },
+    "booking": { "booking_ref": "KMW3P8", "flight_no": "AU901", "origin": "FCO", "destination": "JFK",
+                 "departure_offset_minutes": -60, "duration_minutes": 590, "distance_km": 6880 }
+  },
+  {
+    "passenger": { "id": "P-004", "name": "Giulia Bianchi", "contact": "giulia.bianchi@example.com", "special_needs": [] },
+    "booking": { "booking_ref": "GBX7T2", "flight_no": "AU630", "origin": "FCO", "destination": "CDG",
+                 "departure_day": 10, "departure_time": "09:00", "duration_minutes": 135, "distance_km": 1105 }
+  },
+  {
+    "passenger": { "id": "P-005", "name": "Thomas Müller", "contact": "thomas.mueller@example.com", "special_needs": [] },
+    "booking": { "booking_ref": "TMQ4L9", "flight_no": "AU640", "origin": "FCO", "destination": "CDG",
+                 "departure_day": 20, "departure_time": "11:20", "duration_minutes": 135, "distance_km": 1105 }
+  },
+  {
+    "passenger": { "id": "P-006", "name": "Ana Costa", "contact": "ana.costa@example.com", "special_needs": [] },
+    "booking": { "booking_ref": "ACR5N8", "flight_no": "AU256", "origin": "CDG", "destination": "LIS",
+                 "departure_day": 5, "departure_time": "13:05", "duration_minutes": 165, "distance_km": 1455 }
+  },
+  {
+    "passenger": { "id": "P-007", "name": "Emily Clark", "contact": "emily.clark@example.com", "special_needs": [] },
+    "booking": { "booking_ref": "ECW2H6", "flight_no": "AU909", "origin": "FCO", "destination": "JFK",
+                 "departure_offset_minutes": 120, "duration_minutes": 590, "distance_km": 6880 }
+  },
+  {
+    "passenger": { "id": "P-008", "name": "Paolo Greco", "contact": "paolo.greco@example.com", "special_needs": [] },
+    "booking": { "booking_ref": "PGB3K1", "flight_no": "AU606", "origin": "FCO", "destination": "CDG",
+                 "departure_offset_minutes": 90, "duration_minutes": 135, "distance_km": 1105 }
+  },
+  {
+    "passenger": { "id": "P-009", "name": "Luca Ferri", "contact": "luca.ferri@example.com", "special_needs": [] },
+    "booking": { "booking_ref": "LFD8V4", "flight_no": "AU620", "origin": "FCO", "destination": "CDG",
+                 "departure_day": 1, "departure_time": "10:40", "duration_minutes": 135, "distance_km": 1105 }
   }
 ]

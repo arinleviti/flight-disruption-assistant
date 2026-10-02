@@ -33,17 +33,16 @@ def update_case_file(case: CaseState, tool_name: str, result: dict) -> None:
         print(f"CASE FILE: saved disruption {case.disruption.flight_no} ({case.disruption.type})")
 
     elif tool_name == "rebooking_agent":
-        # Keep every option ever offered, without duplicates:
-        # the passenger may pick one from an earlier search
-        known_ids = {option.flight_id for option in case.rebooking.options_offered}
-        added = []
-        for option in result.get("options", []):
-            if option["flight_id"] not in known_ids:
-                case.rebooking.options_offered.append(FlightOption.model_validate(option))
-                known_ids.add(option["flight_id"])
-                added.append(option["flight_id"])
+        # The latest search comes first, in the agent's ranking (best first).
+        # Options from earlier searches that aren't in the new one are kept after them,
+        # so the passenger can still pick one they saw before.
+        latest = [FlightOption.model_validate(option) for option in result.get("options", [])]
+        latest_ids = {option.flight_id for option in latest}
+        older = [option for option in case.rebooking.options_offered if option.flight_id not in latest_ids]
+        case.rebooking.options_offered = latest + older
+
         all_ids = [option.flight_id for option in case.rebooking.options_offered]
-        print(f"CASE FILE: added options {added or 'none (already known)'}; all offered: {all_ids}")
+        print(f"CASE FILE: latest options {[o.flight_id for o in latest]}; all known: {all_ids}")
 
     elif tool_name == "record_rebooking":
         case.rebooking.confirmed = FlightOption.model_validate(result)
@@ -85,7 +84,10 @@ def case_file_summary(case: CaseState) -> str:
         lines.append("Disruption: not checked yet")
 
     if case.rebooking.options_offered:
-        lines.append("Flight options offered to the passenger:")
+        lines.append(
+            "Flight options found (ranked best first). Show the passenger at most 3 at a time; "
+            "if they ask for more, show the next ones from this list before searching again:"
+        )
         for option in case.rebooking.options_offered:
             route = "direct" if option.via is None else f"via {option.via}"
             departs = to_local_time(option.departure, option.origin)
@@ -95,7 +97,7 @@ def case_file_summary(case: CaseState) -> str:
                 f"departs {departs}, arrives {arrives} (local times)"
             )
     else:
-        lines.append("Flight options offered: none yet")
+        lines.append("Flight options found: none yet")
 
     confirmed = case.rebooking.confirmed
     if confirmed:

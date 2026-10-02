@@ -1,0 +1,4 @@
+{
+  "FCO": { "meal_voucher_eur": 15, "hours_per_meal_voucher": 6, "max_meal_vouchers": 4, "transport_voucher_eur": 30 },
+  "CDG": { "meal_voucher_eur": 18, "hours_per_meal_voucher": 6, "max_meal_vouchers": 4, "transport_voucher_eur": 35 }
+}

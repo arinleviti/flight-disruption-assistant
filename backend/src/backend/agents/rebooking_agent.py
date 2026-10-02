@@ -12,7 +12,7 @@ FALLBACK_MODELS = [
     "gemini/gemini-3.8-flash"
 ]
 NUM_RETRIES = 0
-MAX_TOOL_ROUNDS = 4  # safety limit: stop if the model keeps calling tools
+MAX_TOOL_ROUNDS = 6  # safety limit: stop if the model keeps calling tools
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "rebooking_system.md"
 REBOOKING_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
 TOOL_SCHEMAS = [SEARCH_FLIGHTS_TOOL]  # the model sees these tools and can call them
@@ -43,6 +43,7 @@ def run_tool(name: str, arguments_json: str) -> dict:
 def add_local_times(result: RebookingResult) -> dict:
     # The agent copies UTC times into its answer. Passengers need the time
     # on the clocks at each airport, so the conversion is done here in code, never by the model.
+    # This turns a Pydantic model instance back into a plain Python dict.
     data = result.model_dump(mode="json")
 
     # zip walks through both lists side by side: the dict to add fields to,
@@ -101,6 +102,7 @@ def get_flights_options(origin: str, destination: str, disrupted_flight_no: str,
 
         if not reply.tool_calls:
             try:
+                #This parses the LLM's reply as JSON and validates it against your Pydantic model in one step.
                 answer = RebookingResult.model_validate_json(reply.content or "")
             except ValidationError as e:
                 # Show the model its own reply and what's wrong with it, then let it try again.

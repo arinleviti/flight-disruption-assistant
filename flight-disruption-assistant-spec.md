@@ -381,3 +381,53 @@ If `get_disruption` finds no disruption (e.g. passenger missed the flight), the 
 - Supervisor sometimes asks only about preferences, not assistance needs
 - Phrasing like "AU610 has been replaced by AU614" before anything is booked
 - Remove debug `print` lines and the unused `history = []` in `rebooking_agent.py` before publishing
+
+
+# Tool result shapes
+
+What `result` looks like in `supervisor.py`, depending on which tool ran:
+
+```python
+result = run_tool(call.function.name, call.function.arguments, case)
+```
+
+`run_tool` is a dispatcher: the shape of `result` depends on `call.function.name`, so at that line it can only be typed as `dict`. The shape becomes known in `update_case_file`, inside the branch for each tool, where the dict is converted into a Pydantic model.
+
+| Tool | `result` looks like | Converted in `update_case_file` to |
+|---|---|---|
+| `get_booking` | `{"passenger": {...}, "booking": {...}}` | `Passenger` + `OriginalBooking` |
+| `get_disruption` | `{"flight_no", "type", "announced_at", "stated_cause", "expected_delay_minutes"}` | `Disruption` |
+| `rebooking_agent` | `{"options": [...], "recommended_flight_id", "reason"}` | a list of `FlightOption` |
+| `record_rebooking` | `{"booking_ref", "booked_at", "flight_id", "flight_no", "origin", "destination", "via", "departure", "arrival", "departure_local", "arrival_local", "status"}` | `FlightOption` (confirmed flight) |
+| any tool, on failure | `{"error": "..."}` | nothing (the case file is not changed) |
+
+## Inside the results
+
+**`get_booking`**
+```python
+{
+    "passenger": {"id", "name", "contact", "special_needs": [...]},
+    "booking": {"booking_ref", "flight_no", "origin", "destination",
+                "scheduled_departure", "scheduled_arrival", "distance_km"},
+}
+```
+
+**`rebooking_agent`**, each item in `"options"`:
+```python
+{"flight_id", "flight_no", "origin", "destination", "via",
+ "departure", "arrival", "departure_local", "arrival_local"}
+```
+
+## The shape journey
+
+```
+JSON file / model arguments (text)
+   │  json.loads
+   ▼
+dict ──── model_validate ────► Pydantic object (dot access, checked)
+   ▲                                │
+   └──────── model_dump ────────────┘
+   │  json.dumps
+   ▼
+text (sent to the model)
+```

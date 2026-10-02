@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 # Every airport in our data, with its time zone.
@@ -56,6 +56,20 @@ def local_to_utc(local_text: str, airport: str) -> str:
     # Label the time with the airport's zone, then convert it to UTC
     local_time = local_time.replace(tzinfo=ZoneInfo(zone_name))
     return local_time.astimezone(timezone.utc).strftime(DATABASE_FORMAT)
+
+
+def local_day_time_to_utc(day: int, time_text: str, airport: str) -> datetime:
+    """A flight time written as 'day + local time' (e.g. tomorrow at 07:15 in Rome) -> UTC datetime.
+
+    day is 0 for today, 1 for tomorrow, and so on, counted in the airport's own
+    time zone, so "tomorrow" means tomorrow in Rome even if UTC is a different date.
+    """
+    zone = ZoneInfo(AIRPORT_TIMEZONES[airport])
+    local_date = datetime.now(zone).date() + timedelta(days=day)
+    hour, minute = (int(part) for part in time_text.split(":"))
+
+    local_time = datetime(local_date.year, local_date.month, local_date.day, hour, minute, tzinfo=zone)
+    return local_time.astimezone(timezone.utc)
 
 
 def current_local_time(airport: str) -> str:
