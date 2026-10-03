@@ -28,7 +28,7 @@ class Disruption(BaseModel):
     type: Literal["cancellation", "delay"]
     announced_at: datetime
     stated_cause: str | None = None          # from the airline's disruption record
-    expected_delay_minutes: float | None = None
+    expected_delay_minutes: int | None = None
 
 
 # ---------- Rebooking (filled by the rebooking agent + passenger's choice) ----------
@@ -42,13 +42,15 @@ class FlightOption(BaseModel):
     departure: datetime
     arrival: datetime
 
+
 class Rebooking(BaseModel):
     options_offered: list[FlightOption] = Field(default_factory=list)
     rejected_count: int = 0
     confirmed: FlightOption | None = None
 
+
 class RebookingResult(BaseModel):
-    """The shape of the agent's final answer, as described in its prompt."""
+    """The shape of the rebooking agent's final answer, as described in its prompt."""
     options: list[FlightOption]
     recommended_flight_id: str | None
     reason: str
@@ -64,7 +66,7 @@ class Compensation(BaseModel):
     sources: list[str] = Field(default_factory=list)  # passages retrieved by RAG
 
 
-# ---------- Care (filled by the care tools) ----------
+# ---------- Care (filled by compute_care_entitlements) ----------
 
 class CareEntitlements(BaseModel):
     meals: bool
@@ -87,6 +89,9 @@ class HotelBooking(BaseModel):
 
 class Care(BaseModel):
     entitlements: CareEntitlements | None = None
+    meal_vouchers: int = 0              # how many meal vouchers the passenger is owed
+    meal_voucher_eur: int = 0           # value of each meal voucher at the departure airport
+    transport_voucher_eur: int = 0      # value of the transport voucher, if transport is owed
     vouchers_issued: list[Voucher] = Field(default_factory=list)
     hotel_booked: HotelBooking | None = None
 
@@ -101,10 +106,10 @@ class Escalation(BaseModel):
 # ---------- The case file itself ----------
 
 class CaseState(BaseModel):
-    """Everything known about one passenger's case, kept for the whole conversation.
+    """Everything known about one booking's case, kept for the whole conversation.
 
     It starts almost empty and fills up as tools return results:
-    booking -> disruption -> options offered -> confirmed flight -> ...
+    booking -> disruption -> options offered -> confirmed flight -> care -> compensation
     """
     case_id: str
     status: Literal["open", "escalated", "closed"] = "open"

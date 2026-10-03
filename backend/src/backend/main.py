@@ -1,6 +1,6 @@
 # to turn the server on:
 # cd C:\Users\alevi\Documents\GitHub\flight-disruption-assistant\backend
-# uv run uvicorn backend.main:app --reload --reload-include "*.md" --port 8000
+# uv run uvicorn backend.main:app --reload --port 8000
 
 from dotenv import load_dotenv
 

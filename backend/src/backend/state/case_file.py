@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from backend.models.case_state import (
+    CareEntitlements,
     CaseState,
     Compensation,
     Disruption,
@@ -21,6 +24,29 @@ def find_case_by_flight(cases: dict[str, CaseState], flight_no: str) -> CaseStat
         if case.original_booking and case.original_booking.flight_no == flight_no:
             return case
     return None
+
+
+def add_local_times(cases: dict[str, CaseState], result: dict) -> None:
+    """Add local times to a get_disruption result, computed by code, before the model reads it.
+
+    Adds the original flight's scheduled departure and arrival in local time, and for a
+    delay, the expected new ones (scheduled time + delay). The model then copies these
+    fields instead of doing time-zone arithmetic itself, which it gets wrong.
+    """
+    if not isinstance(result, dict) or "error" in result:
+        return
+    case = find_case_by_flight(cases, result.get("flight_no", ""))
+    if case is None or case.original_booking is None:
+        return
+
+    booking = case.original_booking
+    result["scheduled_departure_local"] = to_local_time(booking.scheduled_departure, booking.origin)
+    result["scheduled_arrival_local"] = to_local_time(booking.scheduled_arrival, booking.destination)
+
+    if result.get("type") == "delay" and result.get("expected_delay_minutes"):
+        delay = timedelta(minutes=result["expected_delay_minutes"])
+        result["expected_departure_local"] = to_local_time(booking.scheduled_departure + delay, booking.origin)
+        result["expected_arrival_local"] = to_local_time(booking.scheduled_arrival + delay, booking.destination)
 
 
 def update_case_file(cases: dict[str, CaseState], tool_name: str, arguments: dict | None, result: dict) -> None:
@@ -78,6 +104,22 @@ def update_case_file(cases: dict[str, CaseState], tool_name: str, arguments: dic
         case.rebooking.confirmed = FlightOption.model_validate(result)
         print(f"CASE FILE [{case.case_id}]: saved confirmed flight {case.rebooking.confirmed.flight_no}")
 
+    elif tool_name == "compute_care_entitlements":
+        case = cases.get(normalize_ref(arguments.get("booking_ref", "")))
+        if case is None:
+            return
+        vouchers = result["vouchers"]
+        case.care.entitlements = CareEntitlements.model_validate(result["entitlements"])
+        case.care.meal_vouchers = vouchers["meal"]["count"]
+        case.care.meal_voucher_eur = vouchers["meal"]["amount_eur_each"]
+        case.care.transport_voucher_eur = (
+            vouchers["transport"]["amount_eur_each"] if vouchers["transport"]["count"] else 0
+        )
+        print(
+            f"CASE FILE [{case.case_id}]: saved care ({case.care.meal_vouchers} meal vouchers, "
+            f"{case.care.entitlements.hotel_nights} hotel nights)"
+        )
+
     elif tool_name == "compensation_agent":
         case = cases.get(normalize_ref(arguments.get("booking_ref", "")))
         if case is None:
@@ -104,6 +146,21 @@ def update_case_file(cases: dict[str, CaseState], tool_name: str, arguments: dic
         print(f"CASE FILE [{case.case_id}]: case closed")
 
 
+def describe_care(case: CaseState) -> str:
+    """The care a passenger is owed, in one readable line (or 'nothing')."""
+    entitlements = case.care.entitlements
+    parts = []
+    if entitlements.meals:
+        parts.append(f"{case.care.meal_vouchers} meal voucher(s) of {case.care.meal_voucher_eur} EUR each")
+    if entitlements.hotel_nights:
+        parts.append(f"{entitlements.hotel_nights} hotel night(s)")
+    if entitlements.transport:
+        parts.append(f"transport between the airport and the hotel (voucher of {case.care.transport_voucher_eur} EUR)")
+    if entitlements.communications:
+        parts.append(f"{entitlements.communications} free calls or emails")
+    return ", ".join(parts) if parts else "nothing (the wait is too short)"
+
+
 def summarise_case(case: CaseState) -> list[str]:
     """The note lines for one case."""
     lines = []
@@ -116,11 +173,13 @@ def summarise_case(case: CaseState) -> list[str]:
     else:
         lines.append(f"Status: {case.status}")
 
-    if case.original_booking and case.passenger:
-        booking = case.original_booking
+    booking = case.original_booking
+    if booking and case.passenger:
+        departs = to_local_time(booking.scheduled_departure, booking.origin)
         lines.append(
             f"Booking: passenger {case.passenger.name}, flight {booking.flight_no} "
-            f"{booking.origin} -> {booking.destination}, {booking.distance_km} km"
+            f"{booking.origin} -> {booking.destination}, {booking.distance_km} km, "
+            f"originally scheduled to depart {departs} local time"
         )
         if case.passenger.special_needs:
             lines.append("Special needs: " + ", ".join(case.passenger.special_needs))
@@ -128,8 +187,14 @@ def summarise_case(case: CaseState) -> list[str]:
     if case.disruption:
         disruption = case.disruption
         delay = ""
-        if disruption.expected_delay_minutes:
-            delay = f", expected delay {disruption.expected_delay_minutes} minutes"
+        if disruption.type == "delay" and disruption.expected_delay_minutes and booking:
+            shift = timedelta(minutes=disruption.expected_delay_minutes)
+            new_departure = to_local_time(booking.scheduled_departure + shift, booking.origin)
+            new_arrival = to_local_time(booking.scheduled_arrival + shift, booking.destination)
+            delay = (
+                f", expected delay {disruption.expected_delay_minutes} minutes: now expected to depart "
+                f"{new_departure} and arrive {new_arrival} (local times)"
+            )
         lines.append(
             f"Disruption: {disruption.flight_no} {disruption.type} "
             f"({disruption.stated_cause}){delay}"
@@ -163,6 +228,14 @@ def summarise_case(case: CaseState) -> list[str]:
     else:
         lines.append("Confirmed new flight: none yet")
 
+    if case.care.entitlements:
+        lines.append(
+            f"Care: already worked out, owed {describe_care(case)}. Vouchers and hotel are collected "
+            "at the Aurora Airways desk. Do not call compute_care_entitlements again for this booking."
+        )
+    else:
+        lines.append("Care: not worked out yet")
+
     if case.compensation:
         compensation = case.compensation
         if compensation.eligible:
@@ -184,8 +257,9 @@ def case_file_summary(cases: dict[str, CaseState]) -> str:
     """Turn all the cases into the short note the model reads at the start of every turn."""
     lines = [
         "CASE FILE: facts already recorded in this conversation, one case per booking reference. "
-        "Use them instead of calling the same tools again. compensation_agent, close_case and "
-        "record_rebooking need the booking reference of the case they act on."
+        "Use them instead of calling the same tools again. compensation_agent, "
+        "compute_care_entitlements, close_case and record_rebooking need the booking reference "
+        "of the case they act on."
     ]
 
     if not cases:

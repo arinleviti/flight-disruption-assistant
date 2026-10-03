@@ -1,4 +1,4 @@
-from backend.models.case_state import RebookingResult
+from backend.models.case_state import FlightOption, RebookingResult
 from pathlib import Path
 import litellm
 from backend.tools.search_flights import SEARCH_FLIGHTS_TOOL, search_flights
@@ -21,8 +21,6 @@ TOOL_FUNCTIONS = {
     "search_flights": search_flights,
 }
 
-history = []
-
 def run_tool(name: str, arguments_json: str) -> dict:
     function = TOOL_FUNCTIONS.get(name)
     if function is None:
@@ -40,6 +38,28 @@ def run_tool(name: str, arguments_json: str) -> dict:
     except Exception as e:
         return {"error": f"Tool '{name}' failed: {e}"}
 
+def keep_found_flights(answer: RebookingResult, found_flights: dict[str, dict]) -> RebookingResult:
+    """Keep only the options that search_flights really returned, with their details from the search.
+
+    The model's answer is checked against the database results of this run: an option whose
+    flight_id was never found is dropped (it was invented), and every kept option is rebuilt
+    from the search row, so its times and connection come from the database, not from the model.
+    """
+    kept = []
+    for option in answer.options:
+        row = found_flights.get(option.flight_id)
+        if row is None:
+            print(f"GUARD: rebooking agent invented flight {option.flight_id} ({option.flight_no}), dropped")
+            continue
+        kept.append(FlightOption.model_validate(row))
+
+    kept_ids = {option.flight_id for option in kept}
+    recommended = answer.recommended_flight_id
+    if recommended not in kept_ids:
+        recommended = kept[0].flight_id if kept else None
+
+    return RebookingResult(options=kept, recommended_flight_id=recommended, reason=answer.reason)
+
 def add_local_times(result: RebookingResult) -> dict:
     # The agent copies UTC times into its answer. Passengers need the time
     # on the clocks at each airport, so the conversion is done here in code, never by the model.
@@ -54,7 +74,16 @@ def add_local_times(result: RebookingResult) -> dict:
 
     return data
 
-def get_flights_options(origin: str, destination: str, disrupted_flight_no: str, preferences: str = "", special_needs: str = "") -> dict:
+def get_flights_options(
+    origin: str,
+    destination: str,
+    disrupted_flight_no: str,
+    preferences: str = "",
+    special_needs: str = "",
+    original_departure_local: str = "",
+) -> dict:
+    # original_departure_local is NOT in the tool schema: the model never sends it.
+    # The supervisor's run_tool fills it in from the case file before calling this function.
     origin_clean = origin.strip().upper()
     destination_clean = destination.strip().upper()
     disrupted_flight_no_clean = disrupted_flight_no.strip().upper()
@@ -75,10 +104,19 @@ def get_flights_options(origin: str, destination: str, disrupted_flight_no: str,
     # Lets the model turn "tonight" or "tomorrow morning" into real dates, in local time
     parameters["current_local_time_at_origin"] = current_local_time(origin_clean)
 
+    # When the passenger was supposed to fly, so "as soon as possible" is read from that date,
+    # not from today (a flight cancelled 20 days ahead shouldn't be replaced by one tonight)
+    if original_departure_local:
+        parameters["original_departure_local"] = original_departure_local
+
     parameters_json = json.dumps(parameters, ensure_ascii=False)
 
     messages: list[dict] = [{"role": "system", "content": REBOOKING_PROMPT}]
     messages.append({"role": "user", "content": parameters_json})
+
+    # Every flight search_flights returns during this run, by flight_id: the only flights
+    # the agent is allowed to put in its answer
+    found_flights: dict[str, dict] = {}
 
     for _ in range(MAX_TOOL_ROUNDS):
         try:
@@ -116,6 +154,8 @@ def get_flights_options(origin: str, destination: str, disrupted_flight_no: str,
                     ),
                 })
                 continue
+            # Only flights the search really found, with their details from the database
+            answer = keep_found_flights(answer, found_flights)
             # A plain dict with local times added: the supervisor's json.dumps turns it into text for its model.
             return add_local_times(answer)
 
@@ -136,6 +176,9 @@ def get_flights_options(origin: str, destination: str, disrupted_flight_no: str,
         })
         for call in reply.tool_calls:
             result = run_tool(call.function.name, call.function.arguments)
+            # Remember every real flight the search returned
+            for flight in result.get("flights", []):
+                found_flights[flight["flight_id"]] = flight
             print(f"TOOL CALL: {call.function.name}({call.function.arguments}) -> {result}")
             messages.append({
                 "role": "tool",
@@ -151,8 +194,8 @@ REBOOKING_AGENT_TOOL = {
         "name": "rebooking_agent",
         "description": (
             "Specialist agent that searches the airline's flight inventory for alternatives to a "
-            "disrupted flight and returns up to 3 options with local departure and arrival times, "
-            "a recommended flight and a short reason. "
+            "disrupted flight and returns up to 7 options, ranked best first, with local departure "
+            "and arrival times, a recommended flight and a short reason. "
             "Call it once you have the booking and the disruption. Pass the passenger's preferences "
             "in their own words if they gave any, and their special needs from the booking. "
             "Call it again with updated preferences if the passenger rejects the options."

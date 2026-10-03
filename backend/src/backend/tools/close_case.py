@@ -29,7 +29,7 @@ def read_recorded_rebooking(booking_ref: str) -> dict | None:
 def close_case(case: CaseState) -> dict:
     """Check the case is complete, and return the final summary built from the records.
 
-    The flight comes from the database (what was actually booked), the compensation
+    The flight comes from the database (what was actually booked); care and compensation
     from the case file. Refuses to close if a step is missing, and says which one.
     """
     booking = case.original_booking
@@ -42,6 +42,10 @@ def close_case(case: CaseState) -> dict:
     # A cancelled flight must be replaced before the case can close
     if disruption.type == "cancellation" and recorded is None:
         return {"error": "The passenger has no confirmed new flight. Rebook them before closing the case."}
+
+    # The passenger must always be told what care they're owed before the case closes
+    if case.care.entitlements is None:
+        return {"error": "Care hasn't been worked out yet. Call compute_care_entitlements before closing the case."}
 
     if case.compensation is None:
         return {"error": "Compensation hasn't been assessed yet. Call compensation_agent before closing the case."}
@@ -70,12 +74,22 @@ def close_case(case: CaseState) -> dict:
         }
         keeps_original_flight = True
 
+    entitlements = case.care.entitlements
     return {
         "status": "closed",
         "booking_ref": booking.booking_ref,
         "passenger": case.passenger.name if case.passenger else None,
         "keeps_original_flight": keeps_original_flight,
         "flight": flight,
+        "care": {
+            "meal_vouchers": case.care.meal_vouchers,
+            "meal_voucher_eur": case.care.meal_voucher_eur,
+            "hotel_nights": entitlements.hotel_nights,
+            "transport": entitlements.transport,
+            "transport_voucher_eur": case.care.transport_voucher_eur,
+            "communications": entitlements.communications,
+            "collect_at": "Aurora Airways desk at the airport",
+        },
         "compensation": {
             "eligible": case.compensation.eligible,
             "amount_eur": case.compensation.amount_eur,
@@ -89,9 +103,10 @@ CLOSE_CASE_TOOL = {
     "function": {
         "name": "close_case",
         "description": (
-            "Closes one booking's case once its flight is settled and compensation has been assessed. "
-            "Reads everything from that case and the booking records. Returns the final summary "
-            "(flight with local times, compensation), or an error naming the step that is still missing."
+            "Closes one booking's case once its flight is settled, care has been worked out and "
+            "compensation has been assessed. Reads everything from that case and the booking records. "
+            "Returns the final summary (flight with local times, care, compensation), or an error "
+            "naming the step that is still missing."
         ),
         "parameters": {
             "type": "object",
