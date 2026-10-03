@@ -183,15 +183,20 @@ COMPENSATION_AGENT_TOOL = {
     "function": {
         "name": "compensation_agent",
         "description": (
-            "Specialist agent that decides whether the passenger is owed EU261 compensation and "
-            "how much. It reads the booking, the disruption and the confirmed new flight from the "
-            "case file, so it takes no arguments. Returns eligibility, the amount, the reasoning "
-            "and the legal sources, or an error if the passenger hasn't been rebooked yet."
+            "Specialist agent that decides whether the passenger is owed EU261 compensation for one "
+            "booking, and how much. It reads that booking's disruption and confirmed new flight from "
+            "the case file. Returns eligibility, the amount, the reasoning and the legal sources, or "
+            "an error if the passenger hasn't been rebooked yet."
         ),
         "parameters": {
             "type": "object",
-            "properties": {},
-            "required": [],
+            "properties": {
+                "booking_ref": {
+                    "type": "string",
+                    "description": "The booking reference of the case to assess, e.g. AZX4K2.",
+                },
+            },
+            "required": ["booking_ref"],
         },
     },
 }

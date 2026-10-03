@@ -9,31 +9,57 @@ from backend.models.case_state import (
 from backend.tools.time_utils import to_local_time
 
 
-def update_case_file(case: CaseState, tool_name: str, result: dict) -> None:
-    """Save the useful facts from a tool's result into the case file.
+def normalize_ref(booking_ref: str) -> str:
+    """Booking references are compared in one standard form: no spaces, uppercase."""
+    return str(booking_ref or "").strip().upper()
 
-    Called by code after every tool call, so the case file never depends on
-    the model remembering anything. Results with an error change nothing.
+
+def find_case_by_flight(cases: dict[str, CaseState], flight_no: str) -> CaseState | None:
+    """The case whose original booking is on this flight number, if any."""
+    flight_no = str(flight_no or "").strip().upper()
+    for case in cases.values():
+        if case.original_booking and case.original_booking.flight_no == flight_no:
+            return case
+    return None
+
+
+def update_case_file(cases: dict[str, CaseState], tool_name: str, arguments: dict | None, result: dict) -> None:
+    """Save the useful facts from a tool's result into the right case.
+
+    cases holds one case per booking reference. Each tool's result is routed
+    to the case it belongs to, so several bookings never overwrite each other.
+    Called by code after every tool call; results with an error change nothing.
     """
     if not isinstance(result, dict) or "error" in result:
         print(f"CASE FILE: nothing saved from {tool_name} (error or no result)")
         return
+    arguments = arguments or {}
 
     if tool_name == "get_booking":
+        # A new booking reference starts a new case; a known one updates its case
+        ref = normalize_ref(result["booking"]["booking_ref"])
+        case = cases.setdefault(ref, CaseState(case_id=ref))
         #get_booking returns {"passenger": {...}, "booking": {...}}. These two lines take each half, turn it into
         # the matching model (Passenger, OriginalBooking), and put it into the case file's two empty slots.
         case.passenger = Passenger.model_validate(result["passenger"])
         case.original_booking = OriginalBooking.model_validate(result["booking"])
-        print(
-            f"CASE FILE: saved booking {case.original_booking.booking_ref} "
-            f"({case.passenger.name}, {case.original_booking.flight_no})"
-        )
+        print(f"CASE FILE [{ref}]: saved booking ({case.passenger.name}, {case.original_booking.flight_no})")
 
     elif tool_name == "get_disruption":
+        # A disruption belongs to the case whose booking is on that flight
+        case = find_case_by_flight(cases, result["flight_no"])
+        if case is None:
+            print(f"CASE FILE: disruption for {result['flight_no']} matches no booking, not saved")
+            return
         case.disruption = Disruption.model_validate(result)
-        print(f"CASE FILE: saved disruption {case.disruption.flight_no} ({case.disruption.type})")
+        print(f"CASE FILE [{case.case_id}]: saved disruption {case.disruption.flight_no} ({case.disruption.type})")
 
     elif tool_name == "rebooking_agent":
+        # Options belong to the case whose booking is on the disrupted flight
+        case = find_case_by_flight(cases, arguments.get("disrupted_flight_no", ""))
+        if case is None:
+            print("CASE FILE: rebooking options match no booking, not saved")
+            return
         # The latest search comes first, in the agent's ranking (best first).
         # Options from earlier searches that aren't in the new one are kept after them,
         # so the passenger can still pick one they saw before.
@@ -41,18 +67,21 @@ def update_case_file(case: CaseState, tool_name: str, result: dict) -> None:
         latest_ids = {option.flight_id for option in latest}
         older = [option for option in case.rebooking.options_offered if option.flight_id not in latest_ids]
         case.rebooking.options_offered = latest + older
-
         all_ids = [option.flight_id for option in case.rebooking.options_offered]
-        print(f"CASE FILE: latest options {[o.flight_id for o in latest]}; all known: {all_ids}")
+        print(f"CASE FILE [{case.case_id}]: latest options {[o.flight_id for o in latest]}; all known: {all_ids}")
 
     elif tool_name == "record_rebooking":
+        case = cases.get(normalize_ref(result["booking_ref"]))
+        if case is None:
+            print(f"CASE FILE: rebooking for {result['booking_ref']} matches no case, not saved")
+            return
         case.rebooking.confirmed = FlightOption.model_validate(result)
-        print(
-            f"CASE FILE: saved confirmed flight {case.rebooking.confirmed.flight_no} "
-            f"({case.rebooking.confirmed.flight_id})"
-        )
+        print(f"CASE FILE [{case.case_id}]: saved confirmed flight {case.rebooking.confirmed.flight_no}")
 
     elif tool_name == "compensation_agent":
+        case = cases.get(normalize_ref(arguments.get("booking_ref", "")))
+        if case is None:
+            return
         # The agent's reasoning and the calculator's rule are kept together,
         # so the case file says both why and on what basis
         case.compensation = Compensation(
@@ -63,41 +92,38 @@ def update_case_file(case: CaseState, tool_name: str, result: dict) -> None:
             sources=result.get("sources", []),
         )
         print(
-            f"CASE FILE: saved compensation {case.compensation.amount_eur} EUR "
+            f"CASE FILE [{case.case_id}]: saved compensation {case.compensation.amount_eur} EUR "
             f"(extraordinary: {case.compensation.is_extraordinary})"
         )
 
     elif tool_name == "close_case":
+        case = cases.get(normalize_ref(arguments.get("booking_ref", "")))
+        if case is None:
+            return
         case.status = "closed"
-        print(f"CASE FILE: case {case.case_id} closed")
+        print(f"CASE FILE [{case.case_id}]: case closed")
 
 
-def case_file_summary(case: CaseState) -> str:
-    """Turn the case file into a short note the model reads at the start of every turn."""
-    lines = [
-        "CASE FILE: facts already recorded in this conversation. "
-        "Use them instead of calling the same tools again."
-    ]
+def summarise_case(case: CaseState) -> list[str]:
+    """The note lines for one case."""
+    lines = []
 
     if case.status == "closed":
         lines.append(
-            "Case status: CLOSED. Everything is settled. Answer the passenger's questions from "
-            "the facts below; don't search, book or reassess anything."
+            "Status: CLOSED. This booking is settled. Answer questions about it from the facts "
+            "below; don't search, book or reassess anything for it."
         )
     else:
-        lines.append(f"Case status: {case.status}")
+        lines.append(f"Status: {case.status}")
 
     if case.original_booking and case.passenger:
         booking = case.original_booking
         lines.append(
-            f"Booking: {booking.booking_ref}, passenger {case.passenger.name}, "
-            f"flight {booking.flight_no} {booking.origin} -> {booking.destination}, "
-            f"{booking.distance_km} km"
+            f"Booking: passenger {case.passenger.name}, flight {booking.flight_no} "
+            f"{booking.origin} -> {booking.destination}, {booking.distance_km} km"
         )
         if case.passenger.special_needs:
             lines.append("Special needs: " + ", ".join(case.passenger.special_needs))
-    else:
-        lines.append("Booking: not identified yet")
 
     if case.disruption:
         disruption = case.disruption
@@ -146,9 +172,29 @@ def case_file_summary(case: CaseState) -> str:
         lines.append(
             f"Compensation: already assessed, {outcome} "
             f"(extraordinary circumstances: {'yes' if compensation.is_extraordinary else 'no'}). "
-            f"Reason: {compensation.reasoning} Do not call compensation_agent again."
+            f"Reason: {compensation.reasoning} Do not call compensation_agent again for this booking."
         )
     else:
         lines.append("Compensation: not assessed yet")
+
+    return lines
+
+
+def case_file_summary(cases: dict[str, CaseState]) -> str:
+    """Turn all the cases into the short note the model reads at the start of every turn."""
+    lines = [
+        "CASE FILE: facts already recorded in this conversation, one case per booking reference. "
+        "Use them instead of calling the same tools again. compensation_agent, close_case and "
+        "record_rebooking need the booking reference of the case they act on."
+    ]
+
+    if not cases:
+        lines.append("No booking identified yet.")
+        return "\n".join(lines)
+
+    for ref, case in cases.items():
+        lines.append("")
+        lines.append(f"=== Booking {ref} ===")
+        lines.extend(summarise_case(case))
 
     return "\n".join(lines)

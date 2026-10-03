@@ -9,7 +9,7 @@ from backend.agents.compensation_agent import COMPENSATION_AGENT_TOOL, compensat
 from backend.tools.record_rebooking import RECORD_REBOOKING_TOOL, record_rebooking
 from backend.tools.close_case import CLOSE_CASE_TOOL, close_case
 import json
-from backend.state.case_file import case_file_summary, update_case_file
+from backend.state.case_file import case_file_summary, normalize_ref, update_case_file
 
 MODEL = "groq/openai/gpt-oss-120b"
 FALLBACK_MODELS = [
@@ -39,34 +39,53 @@ TOOL_FUNCTIONS = {
     "close_case": close_case,
 }
 
-# Tools that read everything from the case file: the model passes no arguments,
-# and the code hands them the case instead.
+# Tools that work on a whole case: the model passes only the booking reference,
+# and the code hands them that booking's case.
 CASE_TOOLS = {"compensation_agent", "close_case"}
 
-def run_tool(name: str, arguments_json: str, case: CaseState) -> dict:
+
+def parse_arguments(arguments_json: str) -> dict | None:
+    """The model's arguments, from JSON text to a dictionary. None if they aren't valid."""
+    try:
+        # It turns the model's arguments from text into a Python dictionary. from '{"booking_ref": "1254RF"}' to {"booking_ref": "1254RF"}
+        arguments = json.loads(arguments_json or "{}")
+    except json.JSONDecodeError:
+        return None
+    return arguments if isinstance(arguments, dict) else None
+
+
+def run_tool(name: str, arguments: dict | None, cases: dict[str, CaseState]) -> dict:
     function = TOOL_FUNCTIONS.get(name)
     if function is None:
         return {"error": f"Unknown tool '{name}'. Use only the tools you were given."}
 
-    # Case-file tools: ignore whatever arguments the model sent, pass the case itself
+    if arguments is None:
+        return {"error": "The tool arguments were not valid JSON."}
+
+    # Case tools: find the case for the booking reference, and pass the case itself
     if name in CASE_TOOLS:
+        ref = normalize_ref(arguments.get("booking_ref", ""))
+        case = cases.get(ref)
+        if case is None:
+            known = ", ".join(cases) or "none yet"
+            return {
+                "error": (
+                    f"No case found for booking '{ref}'. Known bookings: {known}. "
+                    "Use one of them, or call get_booking first."
+                )
+            }
         try:
             return function(case)
         except Exception as e:
             return {"error": f"Tool '{name}' failed: {e}"}
 
-    try:
-        # It turns the model's arguments from text into a Python dictionary. from '{"booking_ref": "1254RF"}' to {"booking_ref": "1254RF"}
-        arguments = json.loads(arguments_json or "{}")
-    except json.JSONDecodeError:
-        return {"error": "The tool arguments were not valid JSON."}
-
-    # Guard: the booking is already in the case file, so don't look it up again.
+    # Guard: this booking is already in the case file, so don't look it up again.
     # Return what's stored instead of running the tool (saves a call and tokens).
-    if name == "get_booking" and case.original_booking and case.passenger:
-        requested_ref = str(arguments.get("booking_ref", "")).strip().upper()
-        if requested_ref == case.original_booking.booking_ref:
-            print(f"GUARD: get_booking({requested_ref}) answered from the case file")
+    if name == "get_booking":
+        ref = normalize_ref(arguments.get("booking_ref", ""))
+        case = cases.get(ref)
+        if case and case.original_booking and case.passenger:
+            print(f"GUARD: get_booking({ref}) answered from the case file")
             return {
                 "passenger": case.passenger.model_dump(mode="json"),
                 "booking": case.original_booking.model_dump(mode="json"),
@@ -79,17 +98,18 @@ def run_tool(name: str, arguments_json: str, case: CaseState) -> dict:
     except Exception as e:
         return {"error": f"Tool '{name}' failed: {e}"}
 
-def answer_request(message: str, history: list[Message] | None = None, case: CaseState | None = None) -> str:
+
+def answer_request(message: str, history: list[Message] | None = None, cases: dict[str, CaseState] | None = None) -> str:
 
     if history is None:
         history = []
 
-    if case is None:
-        case = CaseState(case_id="no-session")
+    if cases is None:
+        cases = {}
 
     messages: list[dict] = [{"role": "system", "content": SUPERVISOR_PROMPT}]
     # The case file: facts from earlier tool results, which the history doesn't contain
-    messages.append({"role": "system", "content": case_file_summary(case)})
+    messages.append({"role": "system", "content": case_file_summary(cases)})
     messages.extend([m.model_dump() for m in history])
 
     messages.append({"role": "user", "content": message})
@@ -141,10 +161,11 @@ def answer_request(message: str, history: list[Message] | None = None, case: Cas
                 for call in reply.tool_calls
             ],
         })
-        # ...then run each tool, save its facts to the case file, and add its result
+        # ...then run each tool, save its facts to the right case, and add its result
         for call in reply.tool_calls:
-            result = run_tool(call.function.name, call.function.arguments, case)
-            update_case_file(case, call.function.name, result)
+            arguments = parse_arguments(call.function.arguments)
+            result = run_tool(call.function.name, arguments, cases)
+            update_case_file(cases, call.function.name, arguments, result)
             print(f"TOOL CALL: {call.function.name}({call.function.arguments}) -> {result}")
             messages.append({
                 "role": "tool",

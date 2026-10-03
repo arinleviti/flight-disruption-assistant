@@ -89,15 +89,19 @@ CLOSE_CASE_TOOL = {
     "function": {
         "name": "close_case",
         "description": (
-            "Closes the passenger's case once their flight is settled and compensation has been "
-            "assessed. Reads everything from the case file and the booking records, so it takes no "
-            "arguments. Returns the final summary (flight with local times, compensation), or an "
-            "error naming the step that is still missing."
+            "Closes one booking's case once its flight is settled and compensation has been assessed. "
+            "Reads everything from that case and the booking records. Returns the final summary "
+            "(flight with local times, compensation), or an error naming the step that is still missing."
         ),
         "parameters": {
             "type": "object",
-            "properties": {},
-            "required": [],
+            "properties": {
+                "booking_ref": {
+                    "type": "string",
+                    "description": "The booking reference of the case to close, e.g. AZX4K2.",
+                },
+            },
+            "required": ["booking_ref"],
         },
     },
 }
