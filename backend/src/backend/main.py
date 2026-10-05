@@ -54,10 +54,15 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     # One Langfuse trace per turn. Everything that happens inside (LLM calls, tools, sub-agents,
     # guards) is nested under it, and session_id groups all the turns of one conversation.
+    # with is used so that the trace is automatically closed when the turn ends, even if an exception occurs.
+    # what is a trace? a trace is a record of one request, with all the events that happened during it. It can be viewed in the Langfuse dashboard.
+    # start_as_current_observation(...) creates that object, and as turn stores it in a variable called turn.
     with langfuse.start_as_current_observation(
         name="chat_turn",
         as_type="agent",
+        #When you pass a dictionary to list(), Python keeps only the keys and drops the values.
         input={"message": request.message, "bookings_in_case_file": list(cases)},
+        #turn is the name of the trace, and it is used to group all the events that happen during this turn. It is also used to group all the turns of one conversation.
     ) as turn:
         with propagate_attributes(session_id=request.session_id, trace_name="chat_turn"):
             answer_str = answer_request(request.message, history, cases)

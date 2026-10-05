@@ -64,6 +64,7 @@ def update_case_file(cases: dict[str, CaseState], tool_name: str, arguments: dic
     if tool_name == "get_booking":
         # A new booking reference starts a new case; a known one updates its case
         ref = normalize_ref(result["booking"]["booking_ref"])
+        #the case is created HERE. setdefault returns the existing case if it exists, or creates a new one with that key and returns it.
         case = cases.setdefault(ref, CaseState(case_id=ref))
         #get_booking returns {"passenger": {...}, "booking": {...}}. These two lines take each half, turn it into
         # the matching model (Passenger, OriginalBooking), and put it into the case file's two empty slots.

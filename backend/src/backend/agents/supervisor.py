@@ -75,6 +75,7 @@ def parse_arguments(arguments_json: str) -> dict | None:
         arguments = json.loads(arguments_json or "{}")
     except json.JSONDecodeError:
         return None
+    #isinstance checks if arguments is a dictionary. If it is, it returns arguments; if not, it returns None.
     return arguments if isinstance(arguments, dict) else None
 
 
@@ -94,14 +95,18 @@ def known_flight_numbers(cases: dict[str, CaseState]) -> set[str]:
     Connections like "AU404/AU433" count as two flight numbers.
     """
     known = set()
+    # values() give the values of a dictionary without the keys. For example,
+    # if cases is {"1254RF": CaseState(...), "6789AB": CaseState(...)}, then cases.values() is [CaseState(...), CaseState(...)].
     for case in cases.values():
         flights = []
         if case.original_booking:
             flights.append(case.original_booking.flight_no)
+        # for each option, take its flight_no.
         flights.extend(option.flight_no for option in case.rebooking.options_offered)
         if case.rebooking.confirmed:
             flights.append(case.rebooking.confirmed.flight_no)
         for flight_no in flights:
+            # split("/") turns "AU404/AU433" into ["AU404", "AU433"], and update() adds both to the set.
             known.update(flight_no.split("/"))
     return known
 
@@ -116,7 +121,7 @@ def last_assistant_message(history: list[Message]) -> str:
 
 def confirmation_problem(arguments: dict | None, cases: dict[str, CaseState], history: list[Message]) -> dict | None:
     """Code-level check of Step 5: a flight can only be booked right after it was restated alone.
-
+    **In order to return None, the latest message must contain only the flight being booked, and no other offered flight.**
     The assistant's previous message must name the flight being booked, and no other offered
     flight. That message is the confirmation question; the passenger's current message answers it.
     A list of options, or a question about a different flight, is not a confirmation.
@@ -133,16 +138,20 @@ def confirmation_problem(arguments: dict | None, cases: dict[str, CaseState], hi
         return None  # run_tool refuses flights that were never offered
 
     previous = last_assistant_message(history)
-    names_chosen = all(number in previous for number in chosen.flight_no.split("/"))
-    other_numbers = {
-        number
-        for option in case.rebooking.options_offered
-        if option.flight_id != flight_id
-        for number in option.flight_no.split("/")
-    }
+    #for number in ... goes through each leg: first "AU404", then "AU433".
+    #number in previous: is this text inside the previous message? With strings, in means "contains", like .includes() in JS:
+    #all(...) gives True only if every check is True. If even one leg is missing from the message, it gives False.
+    mentions_chosen_flight = all(number in previous for number in chosen.flight_no.split("/"))
+    
+    other_numbers = set()
+    for option in case.rebooking.options_offered:      # go through every offered option
+        if option.flight_id != flight_id:              # skip the one being booked
+            for number in option.flight_no.split("/"): # split connections into legs
+                other_numbers.add(number)              # add each leg to the set
+    
     names_others = any(number in previous for number in other_numbers)
 
-    if names_chosen and not names_others:
+    if mentions_chosen_flight and not names_others:
         return None
 
     record_guard("supervisor", "booking_not_confirmed", f"{chosen.flight_no} was not confirmed on its own")
@@ -167,7 +176,12 @@ def run_tool(name: str, arguments: dict | None, cases: dict[str, CaseState]) -> 
 
     # The model forgot the booking reference, but there's only one case: it can only mean that one.
     # Fill it in, so the tool runs and update_case_file also knows where to save the result.
+    # name in CASE_TOOLS checks if the tool is one that works on a whole case, like compute_care_entitlements or compensation_agent.
+    #arguments.get("booking_ref", "") reads booking_ref from the arguments. If the key doesn't exist, it gives "" instead of crashing
+    #normalize_ref(arguments.get("booking_ref", "")) means "is the booking reference missing or empty?"
+    #len(cases) == 1 checks if there's only one case in the conversation. If so, we can assume the model meant that one.
     if name in CASE_TOOLS and not normalize_ref(arguments.get("booking_ref", "")) and len(cases) == 1:
+        #iter(cases) gives dictionary keys one by one. next takes the first one.
         arguments["booking_ref"] = next(iter(cases))
         record_guard(
             "supervisor",
@@ -279,6 +293,7 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
                 fallbacks=FALLBACK_MODELS,
                 num_retries=NUM_RETRIES,
             )
+            #Groq catches it: an exception, handled by the first except.
         except litellm.BadRequestError as e:
             # Groq rejects calls to tools that weren't sent in TOOL_SCHEMAS.
             # Tell the model and let it try again, instead of crashing.
@@ -291,9 +306,11 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
                         "you were given, or answer the passenger directly."
                     ),
                 })
+                #go back to the for loop's next iteration, so the model can try again with the new system message.
                 continue
             # Any other bad request is a real bug: let it crash so we see it
             raise
+        #matches any error: rate limits, timeouts, an outage, or all fallback models failing.
         except Exception as e:
             # Every model failed (rate limits, provider outage, timeout...): never crash the request.
             # Whatever the tools already did is saved in the case file, so the passenger can just retry.
@@ -310,11 +327,14 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
 
             if text:
                 # Output guardrail: the reply may only mention flights that exist in the case file
+                # FLIGHT_NUMBER.findall(text): find every flight number in the text.
+                # the minus used between 2 sets:keeps what's in the first and not in the second.
+                # so if the first contains a flight number not present in the second, it will be considered invented.
                 invented = sorted(set(FLIGHT_NUMBER.findall(text)) - known_flight_numbers(cases))
                 if not invented:
                     return text
 
-                record_guard("supervisor", "invented_flight_in_reply", f"reply mentions {', '.join(invented)}")
+                record_guard("supervisor", "invented_flight_in_reply", f"reply mentions invented flights{', '.join(invented)}")
                 if reply_fixes < MAX_REPLY_FIXES:
                     reply_fixes += 1
                     messages.append({"role": "assistant", "content": text})

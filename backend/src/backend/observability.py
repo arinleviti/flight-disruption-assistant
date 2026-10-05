@@ -132,7 +132,7 @@ def call_llm(agent: str, model: str, messages: list[dict], tools: list[dict], fa
 
     return response
 
-
+# run: Callable[[], dict] a function that takes nothing and returns a dict
 def trace_tool(agent: str, name: str, arguments, run: Callable[[], dict]) -> dict:
     """Run one tool call, recorded.
 
@@ -140,10 +140,12 @@ def trace_tool(agent: str, name: str, arguments, run: Callable[[], dict]) -> dic
     The arguments are recorded again after the call, because code may have added to them
     (e.g. original_departure_local, or a booking_ref filled in by a guard).
     """
+    # perf_counter() is a high-resolution timer, good for measuring short durations.
     started = time.perf_counter()
     as_type = "agent" if name in AGENT_TOOLS else "tool"
 
     # Sub-agents pass the model's raw JSON text: show it as data, not as one long string
+    # So here we check if the instances come from sub-agents, and if so, we try to parse the arguments as JSON. If it fails, we just keep the original string.
     if isinstance(arguments, str):
         try:
             arguments = json.loads(arguments or "{}")
