@@ -5,6 +5,7 @@ import litellm
 from pydantic import BaseModel, ValidationError
 
 from backend.models.case_state import CaseState
+from backend.observability import call_llm, record_guard, trace_tool
 from backend.tools.calculate_compensation import calculate_compensation
 from backend.tools.search_regulations import SEARCH_REGULATIONS_TOOL, search_regulations
 
@@ -74,16 +75,18 @@ def assess_extraordinary(case: CaseState) -> ExtraordinaryAssessment | dict:
 
     for _ in range(MAX_TOOL_ROUNDS):
         try:
-            response = litellm.completion(
+            # Same as litellm.completion, but recorded in Langfuse and in the turn summary
+            response = call_llm(
+                agent="compensation",
                 model=MODEL,
                 messages=messages,
                 tools=TOOL_SCHEMAS,
-                num_retries=NUM_RETRIES,
                 fallbacks=FALLBACK_MODELS,
+                num_retries=NUM_RETRIES,
             )
         except litellm.BadRequestError as e:
             if "tool_use_failed" in str(e):
-                print(f"COMPENSATION: unavailable tool attempted: {e}")
+                record_guard("compensation", "tool_not_available", str(e)[:300])
                 messages.append({
                     "role": "system",
                     "content": "You tried to call a tool that isn't available. Use only the tools you were given.",
@@ -98,6 +101,7 @@ def assess_extraordinary(case: CaseState) -> ExtraordinaryAssessment | dict:
             try:
                 return ExtraordinaryAssessment.model_validate_json(reply.content or "")
             except ValidationError as e:
+                record_guard("compensation", "invalid_answer_format", f"{e.error_count()} problem(s) in the JSON answer")
                 # Show the model its own reply and what's wrong with it, then let it try again
                 messages.append({"role": "assistant", "content": reply.content or ""})
                 messages.append({
@@ -128,15 +132,20 @@ def assess_extraordinary(case: CaseState) -> ExtraordinaryAssessment | dict:
         })
         # ...then run each tool and add its result, linked by the call id
         for call in reply.tool_calls:
-            result = run_tool(call.function.name, call.function.arguments)
-            found = [f"{p['source']} / {p['section']}" for p in result.get("passages", [])]
-            print(f"COMPENSATION TOOL CALL: {call.function.name}({call.function.arguments}) -> {found}")
+            # Runs the tool and records it (terminal, Langfuse, turn summary)
+            result = trace_tool(
+                "compensation",
+                call.function.name,
+                call.function.arguments,
+                lambda call=call: run_tool(call.function.name, call.function.arguments),
+            )
             messages.append({
                 "role": "tool",
                 "tool_call_id": call.id,
                 "content": json.dumps(result, ensure_ascii=False),
             })
 
+    record_guard("compensation", "max_rounds", f"no valid assessment after {MAX_TOOL_ROUNDS} rounds")
     return {"error": "The compensation assessment could not be completed. Escalate to a human colleague."}
 
 
@@ -163,7 +172,13 @@ def compensation_agent(case: CaseState) -> dict:
     if isinstance(assessment, dict):   # the agent couldn't finish
         return assessment
 
-    calculation = calculate_compensation(case, assessment.is_extraordinary)
+    # Code, not the model, turns the decision into an amount. Traced so the step is visible in Langfuse.
+    calculation = trace_tool(
+        "compensation",
+        "calculate_compensation",
+        {"booking_ref": case.case_id, "is_extraordinary": assessment.is_extraordinary},
+        lambda: calculate_compensation(case, assessment.is_extraordinary),
+    )
     if "error" in calculation:
         return calculation
 

@@ -163,3 +163,175 @@ button.secondary {
   color: #2f6fed;
   border: 1px solid #2f6fed;
 }
+
+/* ---------- One assistant reply + its "Details" dropdown ---------- */
+
+.assistant-turn {
+  align-self: flex-start;
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.assistant-turn .message {
+  max-width: 100%;
+}
+
+.turn-details {
+  font-size: 0.75rem;
+  color: #5c6570;
+}
+
+.turn-details summary {
+  cursor: pointer;
+  padding: 2px 4px;
+  list-style: none;
+  user-select: none;
+}
+
+.turn-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.turn-details summary::before {
+  content: '▸ ';
+}
+
+.turn-details[open] summary::before {
+  content: '▾ ';
+}
+
+.turn-details summary:hover {
+  color: #2f6fed;
+}
+
+.details-body {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid #e3e6ea;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 3px 12px;
+  margin: 0;
+}
+
+.details-grid dt {
+  color: #8a929c;
+}
+
+.details-grid dd {
+  margin: 0;
+  color: #1d232a;
+}
+
+.details-body h4 {
+  margin: 10px 0 4px;
+  font-size: 0.75rem;
+  color: #1d232a;
+}
+
+.tool-list,
+.guard-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.tool-list li,
+.guard-list li {
+  margin: 2px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tool-list {
+  list-style: decimal;
+}
+
+.tool-list li {
+  display: list-item;
+}
+
+.tool-list li > * {
+  margin-right: 6px;
+}
+
+.tool-list li.failed code {
+  color: #b42318;
+}
+
+.turn-details code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #1d232a;
+}
+
+.muted {
+  color: #8a929c;
+}
+
+.agent {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  background: #eef1f4;
+  color: #5c6570;
+}
+
+.agent-supervisor {
+  background: #ede7fb;
+  color: #4c2fb0;
+}
+
+.agent-rebooking {
+  background: #e3f0fb;
+  color: #1e4e8c;
+}
+
+.agent-compensation {
+  background: #e6f6ec;
+  color: #23673f;
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.badge.warning {
+  background: #fff4db;
+  color: #8a5a0b;
+}
+
+.badge.guard {
+  background: #fde8e8;
+  color: #9b2c2c;
+}
+
+.badge.error {
+  background: #fdecec;
+  color: #b42318;
+}
+
+.trace-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: #2f6fed;
+  text-decoration: none;
+}
+
+.trace-link:hover {
+  text-decoration: underline;
+}

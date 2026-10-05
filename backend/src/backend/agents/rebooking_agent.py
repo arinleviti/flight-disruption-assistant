@@ -3,6 +3,7 @@ from pathlib import Path
 import litellm
 from backend.tools.search_flights import SEARCH_FLIGHTS_TOOL, search_flights
 from backend.tools.time_utils import current_local_time, to_local_time
+from backend.observability import call_llm, record_guard, trace_tool
 import json
 from pydantic import ValidationError
 
@@ -49,7 +50,7 @@ def keep_found_flights(answer: RebookingResult, found_flights: dict[str, dict]) 
     for option in answer.options:
         row = found_flights.get(option.flight_id)
         if row is None:
-            print(f"GUARD: rebooking agent invented flight {option.flight_id} ({option.flight_no}), dropped")
+            record_guard("rebooking", "invented_flight_dropped", f"{option.flight_id} ({option.flight_no}) was never found by search_flights")
             continue
         kept.append(FlightOption.model_validate(row))
 
@@ -120,16 +121,18 @@ def get_flights_options(
 
     for _ in range(MAX_TOOL_ROUNDS):
         try:
-            response = litellm.completion(
+            # Same as litellm.completion, but recorded in Langfuse and in the turn summary
+            response = call_llm(
+                agent="rebooking",
                 model=MODEL,
                 messages=messages,
                 tools=TOOL_SCHEMAS,
-                num_retries=NUM_RETRIES,
                 fallbacks=FALLBACK_MODELS,
+                num_retries=NUM_RETRIES,
             )
         except litellm.BadRequestError as e:
             if "tool_use_failed" in str(e):
-                print(f"unavailable tool attempted: {e}")
+                record_guard("rebooking", "tool_not_available", str(e)[:300])
                 messages.append({
                     "role": "system",
                     "content": "You tried to call a tool that isn't available. Use only the tools you were given"
@@ -143,6 +146,7 @@ def get_flights_options(
                 #This parses the LLM's reply as JSON and validates it against your Pydantic model in one step.
                 answer = RebookingResult.model_validate_json(reply.content or "")
             except ValidationError as e:
+                record_guard("rebooking", "invalid_answer_format", f"{e.error_count()} problem(s) in the JSON answer")
                 # Show the model its own reply and what's wrong with it, then let it try again.
                 messages.append({"role": "assistant", "content": reply.content or ""})
                 messages.append({
@@ -175,16 +179,22 @@ def get_flights_options(
             ],
         })
         for call in reply.tool_calls:
-            result = run_tool(call.function.name, call.function.arguments)
+            # Runs the tool and records it (terminal, Langfuse, turn summary)
+            result = trace_tool(
+                "rebooking",
+                call.function.name,
+                call.function.arguments,
+                lambda call=call: run_tool(call.function.name, call.function.arguments),
+            )
             # Remember every real flight the search returned
             for flight in result.get("flights", []):
                 found_flights[flight["flight_id"]] = flight
-            print(f"TOOL CALL: {call.function.name}({call.function.arguments}) -> {result}")
             messages.append({
                 "role": "tool",
                 "tool_call_id": call.id,
                 "content": json.dumps(result)
             })
+    record_guard("rebooking", "max_rounds", f"no valid answer after {MAX_TOOL_ROUNDS} rounds")
     return {"error": "I can't complete the request."}
 
 

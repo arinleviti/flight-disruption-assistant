@@ -11,6 +11,7 @@ from backend.tools.record_rebooking import RECORD_REBOOKING_TOOL, record_rebooki
 from backend.tools.compute_care_entitlements import COMPUTE_CARE_ENTITLEMENTS_TOOL, compute_care_entitlements
 from backend.tools.close_case import CLOSE_CASE_TOOL, close_case
 from backend.tools.time_utils import to_local_time
+from backend.observability import call_llm, record_guard, trace_tool
 import json
 from backend.state.case_file import (
     add_local_times,
@@ -144,7 +145,7 @@ def confirmation_problem(arguments: dict | None, cases: dict[str, CaseState], hi
     if names_chosen and not names_others:
         return None
 
-    print(f"GUARD: record_rebooking refused, {chosen.flight_no} was not confirmed on its own")
+    record_guard("supervisor", "booking_not_confirmed", f"{chosen.flight_no} was not confirmed on its own")
     return {
         "error": (
             f"The passenger has not confirmed {chosen.flight_no} yet. Do not book it now. First restate "
@@ -157,20 +158,27 @@ def confirmation_problem(arguments: dict | None, cases: dict[str, CaseState], hi
 def run_tool(name: str, arguments: dict | None, cases: dict[str, CaseState]) -> dict:
     function = TOOL_FUNCTIONS.get(name)
     if function is None:
+        record_guard("supervisor", "unknown_tool", f"the model called '{name}'")
         return {"error": f"Unknown tool '{name}'. Use only the tools you were given."}
 
     if arguments is None:
+        record_guard("supervisor", "invalid_arguments", f"{name} was called with arguments that aren't valid JSON")
         return {"error": "The tool arguments were not valid JSON."}
 
     # The model forgot the booking reference, but there's only one case: it can only mean that one.
     # Fill it in, so the tool runs and update_case_file also knows where to save the result.
     if name in CASE_TOOLS and not normalize_ref(arguments.get("booking_ref", "")) and len(cases) == 1:
         arguments["booking_ref"] = next(iter(cases))
-        print(f"GUARD: {name} called without booking_ref, using the only case {arguments['booking_ref']}")
+        record_guard(
+            "supervisor",
+            "booking_ref_auto_filled",
+            f"{name} called without booking_ref, used the only case {arguments['booking_ref']}",
+        )
 
     # Every tool: refuse to run if a required argument is missing, and say which one
     missing = missing_arguments(name, arguments)
     if missing:
+        record_guard("supervisor", "missing_arguments", f"{name} called without {', '.join(missing)}")
         hint = ""
         if "booking_ref" in missing and cases:
             hint = f" Known booking references: {', '.join(cases)}."
@@ -187,6 +195,7 @@ def run_tool(name: str, arguments: dict | None, cases: dict[str, CaseState]) -> 
         case = cases.get(ref)
         if case is None:
             known = ", ".join(cases) or "none yet"
+            record_guard("supervisor", "unknown_booking", f"{name} called for {ref}, which has no case")
             return {
                 "error": (
                     f"No case found for booking '{ref}'. Call {name} again with booking_ref set to "
@@ -204,7 +213,7 @@ def run_tool(name: str, arguments: dict | None, cases: dict[str, CaseState]) -> 
         ref = normalize_ref(arguments["booking_ref"])
         case = cases.get(ref)
         if case and case.original_booking and case.passenger:
-            print(f"GUARD: get_booking({ref}) answered from the case file")
+            record_guard("supervisor", "booking_from_case_file", f"get_booking({ref}) answered from the case file")
             return {
                 "passenger": case.passenger.model_dump(mode="json"),
                 "booking": case.original_booking.model_dump(mode="json"),
@@ -216,7 +225,7 @@ def run_tool(name: str, arguments: dict | None, cases: dict[str, CaseState]) -> 
         case = cases.get(normalize_ref(arguments["booking_ref"]))
         offered = [option.flight_id for option in case.rebooking.options_offered] if case else []
         if str(arguments["flight_id"]).strip().upper() not in offered:
-            print(f"GUARD: record_rebooking refused, {arguments['flight_id']} was never offered")
+            record_guard("supervisor", "flight_not_offered", f"record_rebooking refused, {arguments['flight_id']} was never offered")
             return {
                 "error": (
                     f"Flight {arguments['flight_id']} was not among the options found for this booking, "
@@ -261,18 +270,20 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
     #range() generates a sequence of numbers for a loop.
     for _ in range(MAX_TOOL_ROUNDS):
         try:
-            response = litellm.completion(
+            # Same as litellm.completion, but recorded in Langfuse and in the turn summary
+            response = call_llm(
+                agent="supervisor",
                 model=MODEL,
                 messages=messages,
                 tools=TOOL_SCHEMAS,
-                num_retries=NUM_RETRIES,
                 fallbacks=FALLBACK_MODELS,
+                num_retries=NUM_RETRIES,
             )
         except litellm.BadRequestError as e:
             # Groq rejects calls to tools that weren't sent in TOOL_SCHEMAS.
             # Tell the model and let it try again, instead of crashing.
             if "tool_use_failed" in str(e):
-                print(f"UNAVAILABLE TOOL ATTEMPTED: {e}")
+                record_guard("supervisor", "tool_not_available", str(e)[:300])
                 messages.append({
                     "role": "system",
                     "content": (
@@ -286,7 +297,7 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
         except Exception as e:
             # Every model failed (rate limits, provider outage, timeout...): never crash the request.
             # Whatever the tools already did is saved in the case file, so the passenger can just retry.
-            print(f"LLM CALL FAILED: {type(e).__name__}: {e}")
+            record_guard("supervisor", "all_models_failed", f"{type(e).__name__}: {str(e)[:300]}")
             return (
                 "Sorry, I'm having trouble reaching our systems right now. "
                 "Please send your message again in a minute."
@@ -303,7 +314,7 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
                 if not invented:
                     return text
 
-                print(f"GUARD: reply mentions flights that don't exist: {invented}")
+                record_guard("supervisor", "invented_flight_in_reply", f"reply mentions {', '.join(invented)}")
                 if reply_fixes < MAX_REPLY_FIXES:
                     reply_fixes += 1
                     messages.append({"role": "assistant", "content": text})
@@ -327,7 +338,7 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
             # ask it once to write its reply, based on what the tools just returned.
             if empty_replies < MAX_EMPTY_REPLIES:
                 empty_replies += 1
-                print("EMPTY REPLY: asking the model to write its answer")
+                record_guard("supervisor", "empty_reply", "the model answered with nothing; asked it to write its reply")
                 messages.append({
                     "role": "system",
                     "content": (
@@ -360,19 +371,25 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
         })
         # ...then run each tool, save its facts to the right case, and add its result
         for call in reply.tool_calls:
+            name = call.function.name
             arguments = parse_arguments(call.function.arguments)
 
-            # Step 5 in code: a booking needs the passenger's explicit confirmation of that exact flight
-            refusal = None
-            if call.function.name == "record_rebooking":
-                refusal = confirmation_problem(arguments, cases, history)
-            result = refusal or run_tool(call.function.name, arguments, cases)
+            def run(name=name, arguments=arguments):
+                # Step 5 in code: a booking needs the passenger's explicit confirmation of that exact flight.
+                # If it's missing, the refusal is the result and the tool never runs.
+                if name == "record_rebooking":
+                    refusal = confirmation_problem(arguments, cases, history)
+                    if refusal:
+                        return refusal
+                return run_tool(name, arguments, cases)
+
+            # Runs the tool and records it (terminal, Langfuse, turn summary)
+            result = trace_tool("supervisor", name, arguments, run)
 
             # Times are computed by code: add local times to the disruption before the model reads it
-            if call.function.name == "get_disruption":
+            if name == "get_disruption":
                 add_local_times(cases, result)
-            update_case_file(cases, call.function.name, arguments, result)
-            print(f"TOOL CALL: {call.function.name}({call.function.arguments}) -> {result}")
+            update_case_file(cases, name, arguments, result)
             messages.append({
                 "role": "tool",
                 "tool_call_id": call.id,
@@ -381,4 +398,5 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
 
         # Loop back: the model now sees the results and continues
 
+    record_guard("supervisor", "max_rounds", f"no final reply after {MAX_TOOL_ROUNDS} rounds")
     return "I'm sorry, I'm having trouble completing this right now. Let me connect you with a colleague."
