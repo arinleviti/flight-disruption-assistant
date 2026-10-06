@@ -1,0 +1,266 @@
+[
+  {
+    "ref": "TMQ4L9",
+    "title": "Thomas · schedule change, 20 days ahead",
+    "checks": [
+      {
+        "check": "booking loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "disruption loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "new flight booked",
+        "passed": true,
+        "detail": "AU644"
+      },
+      {
+        "check": "booked exactly once",
+        "passed": true,
+        "detail": "record_rebooking succeeded 1 time(s)"
+      },
+      {
+        "check": "not before the original date",
+        "passed": true,
+        "detail": "original 2026-10-26, booked 2026-10-26"
+      },
+      {
+        "check": "care worked out",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "compensation assessed",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "extraordinary judgment",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "eligibility",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "amount",
+        "passed": true,
+        "detail": "expected one of [0], got 0"
+      },
+      {
+        "check": "case closed",
+        "passed": true,
+        "detail": "status: closed"
+      },
+      {
+        "check": "no invented flights in replies",
+        "passed": true,
+        "detail": ""
+      }
+    ],
+    "totals": {
+      "seconds": 23.0,
+      "llm_calls": 17,
+      "tokens": 61924,
+      "cost_usd": 0.0198,
+      "fallbacks": 13,
+      "models": [
+        "gemini-3.5-flash-lite",
+        "openai/gpt-oss-120b"
+      ],
+      "guards": {
+        "booking_not_confirmed": 1,
+        "booking_ref_auto_filled": 1,
+        "invalid_answer_format": 1
+      }
+    },
+    "turns": [
+      {
+        "passenger": "Hi, my flight has been cancelled. My booking reference is TMQ4L9.",
+        "assistant": "I'm very sorry to hear your flight has been cancelled. \n\nYour flight AU640 from Rome (FCO) to Paris (CDG) on 26 October 2026 was cancelled due to a schedule consolidation. \n\nWould you prefer the earliest available flight, or do you have a specific time in mind? Also, please let me know if you prefer direct flights or if connections are fine, and if you need any special assistance.",
+        "stats": {
+          "duration_ms": 3121,
+          "llm_calls": 3,
+          "input_tokens": 11768,
+          "output_tokens": 207,
+          "cost_usd": 0.00272,
+          "models": [
+            "openai/gpt-oss-120b",
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 1,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "get_booking",
+              "ok": true,
+              "duration_ms": 6
+            },
+            {
+              "agent": "supervisor",
+              "name": "get_disruption",
+              "ok": true,
+              "duration_ms": 7
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "A flight on the same day as my original one please, any time is fine. Direct only, and I don't need any assistance.",
+        "assistant": "Here are the available direct flights for your journey on 26 October 2026:\n\n1. **AU644** (Recommended) – Direct\n   - Departure: 26 October 2026 at 13:30 from Rome (FCO)\n   - Arrival: 26 October 2026 at 15:45 in Paris (CDG)\n\n2. **AU642** – Direct\n   - Departure: 26 October 2026 at 08:00 from Rome (FCO)\n   - Arrival: 26 October 2026 at 10:15 in Paris (CDG)\n\nWould you like me to book you on the recommended flight, AU644?",
+        "stats": {
+          "duration_ms": 5356,
+          "llm_calls": 4,
+          "input_tokens": 12876,
+          "output_tokens": 605,
+          "cost_usd": 0.005376,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 4,
+          "tools": [
+            {
+              "agent": "rebooking",
+              "name": "search_flights",
+              "ok": true,
+              "duration_ms": 5
+            },
+            {
+              "agent": "supervisor",
+              "name": "rebooking_agent",
+              "ok": true,
+              "duration_ms": 2631
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "I'll take the option you recommend.",
+        "assistant": "Shall I book you on AU644, direct, departing Rome (FCO) on 26 October 2026 at 13:30 and arriving in Paris (CDG) at 15:45?",
+        "stats": {
+          "duration_ms": 2323,
+          "llm_calls": 2,
+          "input_tokens": 9250,
+          "output_tokens": 85,
+          "cost_usd": 0.002987,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 2,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": false,
+              "duration_ms": 1
+            }
+          ],
+          "guards": [
+            {
+              "agent": "supervisor",
+              "name": "booking_not_confirmed",
+              "detail": "AU644 was not confirmed on its own"
+            }
+          ]
+        }
+      },
+      {
+        "passenger": "Yes, please book it.",
+        "assistant": "You are now booked on flight **AU644**, departing Rome (FCO) on 26 October 2026 at 13:30 and arriving in Paris (CDG) at 15:45.\n\nRegarding care entitlements, because of the wait time for your replacement flight, you are entitled to 1 meal voucher worth €15 and free communications (such as calls or emails). You can collect these at the Aurora Airways desk at the airport. (No hotel stay is necessary for this wait.)\n\nRegarding compensation, as you were notified of the schedule change well in advance, no financial compensation is owed under EU261. \n\nYour case is now fully settled and closed. Is there anything else I can help you with today?",
+        "stats": {
+          "duration_ms": 10959,
+          "llm_calls": 7,
+          "input_tokens": 21574,
+          "output_tokens": 516,
+          "cost_usd": 0.007169,
+          "models": [
+            "gemini-3.5-flash-lite",
+            "openai/gpt-oss-120b"
+          ],
+          "fallbacks": 5,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": true,
+              "duration_ms": 3
+            },
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": true,
+              "duration_ms": 1
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "duration_ms": 163
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "duration_ms": 148
+            },
+            {
+              "agent": "compensation",
+              "name": "calculate_compensation",
+              "ok": true,
+              "duration_ms": 0
+            },
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": true,
+              "duration_ms": 5787
+            },
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "duration_ms": 2
+            }
+          ],
+          "guards": [
+            {
+              "agent": "supervisor",
+              "name": "booking_ref_auto_filled",
+              "detail": "compute_care_entitlements called without booking_ref, used the only case TMQ4L9"
+            },
+            {
+              "agent": "compensation",
+              "name": "invalid_answer_format",
+              "detail": "1 problem(s) in the JSON answer"
+            }
+          ]
+        }
+      },
+      {
+        "passenger": "Thank you, that's everything.",
+        "assistant": "You're very welcome. Safe travels to Paris, and please don't hesitate to reach out if you need help with anything else in the future. Have a wonderful day!",
+        "stats": {
+          "duration_ms": 1267,
+          "llm_calls": 1,
+          "input_tokens": 5007,
+          "output_tokens": 36,
+          "cost_usd": 0.001592,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 1,
+          "tools": [],
+          "guards": []
+        }
+      }
+    ]
+  }
+]

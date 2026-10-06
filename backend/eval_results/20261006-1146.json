@@ -1,0 +1,248 @@
+[
+  {
+    "ref": "AZX4K2",
+    "title": "Marco · technical fault, cancelled",
+    "checks": [
+      {
+        "check": "booking loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "disruption loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "new flight booked",
+        "passed": true,
+        "detail": "AU614"
+      },
+      {
+        "check": "booked exactly once",
+        "passed": true,
+        "detail": "record_rebooking succeeded 1 time(s)"
+      },
+      {
+        "check": "care worked out",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "compensation assessed",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "extraordinary judgment",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "eligibility",
+        "passed": true,
+        "detail": "expected True, got True"
+      },
+      {
+        "check": "amount",
+        "passed": true,
+        "detail": "expected one of [125, 250], got 250"
+      },
+      {
+        "check": "case closed",
+        "passed": true,
+        "detail": "status: closed"
+      },
+      {
+        "check": "no invented flights in replies",
+        "passed": true,
+        "detail": ""
+      }
+    ],
+    "totals": {
+      "seconds": 20.2,
+      "llm_calls": 16,
+      "tokens": 65756,
+      "cost_usd": 0.0224,
+      "fallbacks": 12,
+      "models": [
+        "gemini-3.5-flash-lite",
+        "openai/gpt-oss-120b"
+      ],
+      "guards": {
+        "booking_ref_auto_filled": 1
+      }
+    },
+    "turns": [
+      {
+        "passenger": "Hi, my flight has been cancelled. My booking reference is AZX4K2.",
+        "assistant": "I'm very sorry to hear your flight from Rome to Paris has been cancelled. \n\nAurora Airways cancelled flight AU610 due to a technical fault discovered during pre-flight inspection.\n\nTo help you find the best replacement, do you prefer the earliest available flight or a specific time of day, and would you prefer a direct flight or are connecting flights okay?",
+        "stats": {
+          "duration_ms": 2844,
+          "llm_calls": 3,
+          "input_tokens": 11795,
+          "output_tokens": 178,
+          "cost_usd": 0.002672,
+          "models": [
+            "openai/gpt-oss-120b",
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 1,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "get_booking",
+              "ok": true,
+              "duration_ms": 7
+            },
+            {
+              "agent": "supervisor",
+              "name": "get_disruption",
+              "ok": true,
+              "duration_ms": 6
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "The earliest available flight please. Connections are fine and I don't need any assistance.",
+        "assistant": "Here are the earliest available replacement options for your trip to Paris:\n\n1. **Flight AU402/AU431** (via MXP) – departs Rome on 2026-10-06 at 14:16 and arrives in Paris at 20:16.\n2. **Flight AU614** (direct) – departs Rome on 2026-10-06 at 17:16 and arrives in Paris at 19:31. *(Note: Although flight F-004 departs slightly earlier, this direct flight actually arrives earlier at 19:31.)*\n3. **Flight AU618** (direct) – departs Rome on 2026-10-06 at 21:45 and arrives in Paris on 2026-10-07 at 00:00.\n\nWould you like one of these options?",
+        "stats": {
+          "duration_ms": 6723,
+          "llm_calls": 4,
+          "input_tokens": 15131,
+          "output_tokens": 1177,
+          "cost_usd": 0.007482,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 4,
+          "tools": [
+            {
+              "agent": "rebooking",
+              "name": "search_flights",
+              "ok": true,
+              "duration_ms": 3
+            },
+            {
+              "agent": "supervisor",
+              "name": "rebooking_agent",
+              "ok": true,
+              "duration_ms": 3973
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "I'll take the option you recommend.",
+        "assistant": "Shall I book you on flight AU614, departing Rome today (2026-10-06) at 17:16 and arriving in Paris at 19:31?",
+        "stats": {
+          "duration_ms": 1155,
+          "llm_calls": 1,
+          "input_tokens": 4898,
+          "output_tokens": 45,
+          "cost_usd": 0.001582,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 1,
+          "tools": [],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Yes, please book it.",
+        "assistant": "You are now booked on flight **AU614**, departing Rome (FCO) on 2026-10-06 at 17:16 and arriving in Paris (CDG) at 19:31.\n\nRegarding your care entitlements while you wait:\n- You are entitled to **1 meal voucher worth €15**.\n- You are entitled to **2 free calls or emails** for communications.\n*(Hotel accommodation and transport are not required for this wait time.)* You can collect your meal voucher at the Aurora Airways desk at the airport.\n\nRegarding compensation:\n- You are **eligible for €250** in compensation because the cancellation was caused by a technical fault, which is the airline's responsibility and does not qualify as an extraordinary circumstance.\n\nIs there anything else I can help you with today?",
+        "stats": {
+          "duration_ms": 6563,
+          "llm_calls": 6,
+          "input_tokens": 20793,
+          "output_tokens": 555,
+          "cost_usd": 0.006936,
+          "models": [
+            "gemini-3.5-flash-lite",
+            "openai/gpt-oss-120b"
+          ],
+          "fallbacks": 4,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": true,
+              "duration_ms": 3
+            },
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": true,
+              "duration_ms": 4
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "duration_ms": 175
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "duration_ms": 141
+            },
+            {
+              "agent": "compensation",
+              "name": "calculate_compensation",
+              "ok": true,
+              "duration_ms": 0
+            },
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": true,
+              "duration_ms": 2619
+            },
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "duration_ms": 2
+            }
+          ],
+          "guards": [
+            {
+              "agent": "supervisor",
+              "name": "booking_ref_auto_filled",
+              "detail": "compute_care_entitlements called without booking_ref, used the only case AZX4K2"
+            }
+          ]
+        }
+      },
+      {
+        "passenger": "Thank you, that's everything.",
+        "assistant": "You're very welcome, Marco. Here is a final summary of your case:\n\n* **New Flight:** AU614, direct, departing Rome (FCO) on 2026-10-06 at 17:16 and arriving in Paris (CDG) at 19:31.\n* **Care:** 1 meal voucher worth €15 and 2 free calls or emails. (You can collect your voucher at the Aurora Airways desk at the airport.)\n* **Compensation:** You are entitled to €250 for the cancellation.\n\nYour case is now fully settled and closed. Safe travels to Paris, and please let me know if you have any other questions in the future!",
+        "stats": {
+          "duration_ms": 2952,
+          "llm_calls": 2,
+          "input_tokens": 11009,
+          "output_tokens": 175,
+          "cost_usd": 0.003741,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 2,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      }
+    ]
+  }
+]

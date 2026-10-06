@@ -1,0 +1,744 @@
+[
+  {
+    "ref": "AZX4K2",
+    "title": "Marco · technical fault, cancelled",
+    "checks": [
+      {
+        "check": "booking loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "disruption loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "new flight booked",
+        "passed": true,
+        "detail": "AU402/AU431"
+      },
+      {
+        "check": "booked exactly once",
+        "passed": true,
+        "detail": "record_rebooking succeeded 1 time(s)"
+      },
+      {
+        "check": "care worked out",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "compensation assessed",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "extraordinary judgment",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "eligibility",
+        "passed": true,
+        "detail": "expected True, got True"
+      },
+      {
+        "check": "amount",
+        "passed": true,
+        "detail": "expected one of [125, 250], got 250"
+      },
+      {
+        "check": "case closed",
+        "passed": true,
+        "detail": "status: closed"
+      },
+      {
+        "check": "no invented flights in replies",
+        "passed": true,
+        "detail": ""
+      }
+    ],
+    "totals": {
+      "seconds": 20.6,
+      "llm_calls": 14,
+      "tokens": 58608,
+      "cost_usd": 0.0197,
+      "fallbacks": 10,
+      "models": [
+        "gemini-3.5-flash-lite",
+        "openai/gpt-oss-120b"
+      ],
+      "guards": {
+        "booking_ref_auto_filled": 1
+      }
+    },
+    "turns": [
+      {
+        "passenger": "Hi, my flight has been cancelled. My booking reference is AZX4K2.",
+        "assistant": "I'm very sorry to hear that your flight was cancelled. Flight AU610 from Rome Fiumicino to Paris Charles de Gaulle has been cancelled due to a technical fault with the aircraft's hydraulic system during pre-flight inspection.\n\nTo help you find the best alternative, do you prefer the earliest available flight or a specific time, and would you prefer a direct flight or are connecting flights fine?",
+        "stats": {
+          "duration_ms": 3246,
+          "llm_calls": 3,
+          "input_tokens": 12032,
+          "output_tokens": 177,
+          "cost_usd": 0.002737,
+          "models": [
+            "openai/gpt-oss-120b",
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 1,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "get_booking",
+              "ok": true,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "get_disruption",
+              "ok": true,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "The earliest available flight please. Connections are fine and I don't need any assistance.",
+        "assistant": "Here are the best available options for your journey:\n\n1. **Flight AU402/AU431** (Connecting via MXP) — Today, departing Rome at 17:24 and arriving in Paris at 23:24. *(Recommended based on earliest departure)*\n2. **Flight AU614** (Direct) — Today, departing Rome at 20:24 and arriving in Paris at 22:39.\n3. **Flight AU618** (Direct) — Today, departing Rome at 21:45 and arriving in Paris at 00:00 on 2026-10-07.\n\nWould you like to go ahead with the recommended flight (AU402/AU431), or would you prefer one of the others?",
+        "stats": {
+          "duration_ms": 7066,
+          "llm_calls": 4,
+          "input_tokens": 15317,
+          "output_tokens": 1135,
+          "cost_usd": 0.007432,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 4,
+          "tools": [
+            {
+              "agent": "rebooking",
+              "name": "search_flights",
+              "ok": true,
+              "duration_ms": 7
+            },
+            {
+              "agent": "supervisor",
+              "name": "rebooking_agent",
+              "ok": true,
+              "duration_ms": 3890
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "I'll take the option you recommend.",
+        "assistant": "Shall I book you on flight AU402/AU431 (connecting via MXP), departing Rome today at 17:24 and arriving in Paris at 23:24?",
+        "stats": {
+          "duration_ms": 1480,
+          "llm_calls": 1,
+          "input_tokens": 4964,
+          "output_tokens": 43,
+          "cost_usd": 0.001597,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 1,
+          "tools": [],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Yes, please book it.",
+        "assistant": "You are successfully booked on flight **AU402/AU431** (connecting via MXP), departing Rome today, October 6, 2026, at 17:24 and arriving in Paris at 23:24.\n\nRegarding care entitlements:\n- You are entitled to **1 meal voucher** worth €15.\n- You are entitled to **2 free phone calls or emails** for communication.\nYou can collect your meal voucher at the Aurora Airways desk at the airport. Since your wait time is relatively short, hotel accommodation and airport transport are not required.\n\nRegarding compensation:\n- You are **eligible for €250** in compensation because the cancellation was caused by a technical fault, which is considered an internal technical problem rather than an extraordinary circumstance.\n\nYour case has now been successfully closed. Is there anything else I can help you with today?",
+        "stats": {
+          "duration_ms": 7364,
+          "llm_calls": 5,
+          "input_tokens": 18852,
+          "output_tokens": 616,
+          "cost_usd": 0.006221,
+          "models": [
+            "gemini-3.5-flash-lite",
+            "openai/gpt-oss-120b"
+          ],
+          "fallbacks": 3,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": true,
+              "duration_ms": 6
+            },
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": true,
+              "duration_ms": 6
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "duration_ms": 678
+            },
+            {
+              "agent": "compensation",
+              "name": "calculate_compensation",
+              "ok": true,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": true,
+              "duration_ms": 2136
+            },
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "duration_ms": 4
+            }
+          ],
+          "guards": [
+            {
+              "agent": "supervisor",
+              "name": "booking_ref_auto_filled",
+              "detail": "compute_care_entitlements called without booking_ref, used the only case AZX4K2"
+            }
+          ]
+        }
+      },
+      {
+        "passenger": "Thank you, that's everything.",
+        "assistant": "You're very welcome! Safe travels to Paris, and if you ever need assistance in the future, don't hesitate to reach out. Have a wonderful trip!",
+        "stats": {
+          "duration_ms": 1434,
+          "llm_calls": 1,
+          "input_tokens": 5438,
+          "output_tokens": 34,
+          "cost_usd": 0.001716,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 1,
+          "tools": [],
+          "guards": []
+        }
+      }
+    ]
+  },
+  {
+    "ref": "TMQ4L9",
+    "title": "Thomas · schedule change, 20 days ahead",
+    "checks": [
+      {
+        "check": "booking loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "disruption loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "new flight booked",
+        "passed": true,
+        "detail": "AU644"
+      },
+      {
+        "check": "booked exactly once",
+        "passed": true,
+        "detail": "record_rebooking succeeded 1 time(s)"
+      },
+      {
+        "check": "not before the original date",
+        "passed": true,
+        "detail": "original 2026-10-26, booked 2026-10-26"
+      },
+      {
+        "check": "care worked out",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "compensation assessed",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "extraordinary judgment",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "eligibility",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "amount",
+        "passed": true,
+        "detail": "expected one of [0], got 0"
+      },
+      {
+        "check": "case closed",
+        "passed": true,
+        "detail": "status: closed"
+      },
+      {
+        "check": "no invented flights in replies",
+        "passed": true,
+        "detail": ""
+      }
+    ],
+    "totals": {
+      "seconds": 34.5,
+      "llm_calls": 15,
+      "tokens": 58285,
+      "cost_usd": 0.0253,
+      "fallbacks": 12,
+      "models": [
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash",
+        "openai/gpt-oss-120b"
+      ],
+      "guards": {}
+    },
+    "turns": [
+      {
+        "passenger": "Hi, my flight has been cancelled. My booking reference is TMQ4L9.",
+        "assistant": "I am sorry to hear your flight has been cancelled. Your flight AU640 from Rome to Paris on 26 October 2026 was cancelled due to a schedule change and route consolidation.\n\nSince you have no special assistance needs listed in your booking, would you prefer the earliest available flight, or do you have a specific time in mind? Also, please let me know if you prefer direct flights or if connecting flights are fine with you.",
+        "stats": {
+          "duration_ms": 4226,
+          "llm_calls": 3,
+          "input_tokens": 12797,
+          "output_tokens": 137,
+          "cost_usd": 0.004182,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 3,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "get_booking",
+              "ok": true,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "get_disruption",
+              "ok": true,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "A flight on the same day as my original one please, any time is fine. Direct only, and I don't need any assistance.",
+        "assistant": "Here are the direct flight options for your journey on 26 October 2026:\n\n1. **AU644** (Recommended)\n   - Departure: Rome (FCO) on 26 October 2026 at 13:30 local time\n   - Arrival: Paris (CDG) on 26 October 2026 at 15:45 local time\n   - Direct flight\n\n2. **AU642**\n   - Departure: Rome (FCO) on 26 October 2026 at 08:00 local time\n   - Arrival: Paris (CDG) on 26 October 2026 at 10:15 local time\n   - Direct flight\n\nWould you like me to book you on flight AU644, departing Rome on 26 October 2026 at 13:30 and arriving in Paris at 15:45?",
+        "stats": {
+          "duration_ms": 6806,
+          "llm_calls": 4,
+          "input_tokens": 12973,
+          "output_tokens": 975,
+          "cost_usd": 0.005358,
+          "models": [
+            "gemini-3.5-flash-lite",
+            "openai/gpt-oss-120b"
+          ],
+          "fallbacks": 3,
+          "tools": [
+            {
+              "agent": "rebooking",
+              "name": "search_flights",
+              "ok": true,
+              "duration_ms": 4
+            },
+            {
+              "agent": "supervisor",
+              "name": "rebooking_agent",
+              "ok": true,
+              "duration_ms": 3481
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "I'll take the option you recommend.",
+        "assistant": "Just to confirm, shall I book you on direct flight AU644, departing Rome (FCO) on 26 October 2026 at 13:30 local time and arriving in Paris (CDG) at 15:45 local time?",
+        "stats": {
+          "duration_ms": 13665,
+          "llm_calls": 1,
+          "input_tokens": 4701,
+          "output_tokens": 1042,
+          "cost_usd": 0.007433,
+          "models": [
+            "gemini-3.8-flash"
+          ],
+          "fallbacks": 1,
+          "tools": [],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Yes, please book it.",
+        "assistant": "You are now confirmed on direct flight **AU644**, departing Rome (FCO) on **26 October 2026 at 13:30** and arriving in Paris (CDG) at **15:45** local time.\n\nRegarding your care entitlements due to the schedule change, you are owed a meal voucher (worth €15) and free communications (calls or emails). You can collect your voucher at the Aurora Airways desk at the airport. Because the wait is short, no hotel accommodation or transport is required.\n\nAs for compensation, you are not owed a cash compensation payment because you were informed of the schedule change more than two weeks before departure. \n\nYour case is now fully settled and closed. Is there anything else I can help you with today?",
+        "stats": {
+          "duration_ms": 8569,
+          "llm_calls": 6,
+          "input_tokens": 19958,
+          "output_tokens": 524,
+          "cost_usd": 0.006667,
+          "models": [
+            "gemini-3.5-flash-lite",
+            "openai/gpt-oss-120b"
+          ],
+          "fallbacks": 4,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": true,
+              "duration_ms": 5
+            },
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": true,
+              "duration_ms": 1
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "duration_ms": 662
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "duration_ms": 644
+            },
+            {
+              "agent": "compensation",
+              "name": "calculate_compensation",
+              "ok": true,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": true,
+              "duration_ms": 4284
+            },
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "duration_ms": 4
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Thank you, that's everything.",
+        "assistant": "You're very welcome! If you ever need help with future travel, don't hesitate to reach out. Have a safe and pleasant journey to Paris!",
+        "stats": {
+          "duration_ms": 1250,
+          "llm_calls": 1,
+          "input_tokens": 5146,
+          "output_tokens": 32,
+          "cost_usd": 0.001624,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 1,
+          "tools": [],
+          "guards": []
+        }
+      }
+    ]
+  },
+  {
+    "ref": "PGB3K1",
+    "title": "Paolo · bird strike",
+    "checks": [
+      {
+        "check": "booking loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "disruption loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "new flight booked",
+        "passed": true,
+        "detail": "AU402/AU431"
+      },
+      {
+        "check": "booked exactly once",
+        "passed": true,
+        "detail": "record_rebooking succeeded 1 time(s)"
+      },
+      {
+        "check": "care worked out",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "compensation assessed",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "extraordinary judgment",
+        "passed": true,
+        "detail": "expected True, got True"
+      },
+      {
+        "check": "eligibility",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "amount",
+        "passed": true,
+        "detail": "expected one of [0], got 0"
+      },
+      {
+        "check": "case closed",
+        "passed": true,
+        "detail": "status: closed"
+      },
+      {
+        "check": "no invented flights in replies",
+        "passed": true,
+        "detail": ""
+      }
+    ],
+    "totals": {
+      "seconds": 43.5,
+      "llm_calls": 16,
+      "tokens": 67251,
+      "cost_usd": 0.0253,
+      "fallbacks": 14,
+      "models": [
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash",
+        "openai/gpt-oss-120b"
+      ],
+      "guards": {
+        "booking_not_confirmed": 1,
+        "booking_ref_auto_filled": 2
+      }
+    },
+    "turns": [
+      {
+        "passenger": "Hi, my flight has been cancelled. My booking reference is PGB3K1.",
+        "assistant": "I am so sorry to hear your flight was cancelled, Paolo. \n\nAccording to our records, flight AU606 from Rome Fiumicino to Paris Charles de Gaulle today was cancelled because of a bird strike on the aircraft's previous landing, which required a mandatory inspection.\n\nDo you prefer the earliest available flight, or do you have a specific time in mind? Also, would you prefer a direct flight, or are you happy with a connection if it gets you there sooner?",
+        "stats": {
+          "duration_ms": 4881,
+          "llm_calls": 3,
+          "input_tokens": 12835,
+          "output_tokens": 144,
+          "cost_usd": 0.004211,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 3,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "get_booking",
+              "ok": true,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "get_disruption",
+              "ok": true,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "The earliest available flight please. Connections are fine and I don't need any assistance.",
+        "assistant": "Here are the best options for your journey to Paris:\n\n1. **Flight AU402/AU431** (Connecting via MXP) — Departing Rome on 2026-10-06 at 17:26, arriving in Paris at 23:26.\n2. **Flight AU614** (Direct) — Departing Rome on 2026-10-06 at 20:26, arriving in Paris at 22:41.\n3. **Flight AU618** (Direct) — Departing Rome on 2026-10-06 at 21:45, arriving in Paris on 2026-10-07 at 00:00.\n\nWould you like one of these options?",
+        "stats": {
+          "duration_ms": 6772,
+          "llm_calls": 4,
+          "input_tokens": 14950,
+          "output_tokens": 1210,
+          "cost_usd": 0.006675,
+          "models": [
+            "openai/gpt-oss-120b",
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 3,
+          "tools": [
+            {
+              "agent": "rebooking",
+              "name": "search_flights",
+              "ok": true,
+              "duration_ms": 5
+            },
+            {
+              "agent": "supervisor",
+              "name": "rebooking_agent",
+              "ok": true,
+              "duration_ms": 4456
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "I'll take the option you recommend.",
+        "assistant": "Shall I book you on flight AU402/AU431 (connecting via MXP), departing Rome on 2026-10-06 at 17:26 and arriving in Paris at 23:26?",
+        "stats": {
+          "duration_ms": 3008,
+          "llm_calls": 2,
+          "input_tokens": 10188,
+          "output_tokens": 125,
+          "cost_usd": 0.003369,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 2,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": false,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": false,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": false,
+              "duration_ms": 0
+            }
+          ],
+          "guards": [
+            {
+              "agent": "supervisor",
+              "name": "booking_not_confirmed",
+              "detail": "AU402/AU431 was not confirmed on its own"
+            },
+            {
+              "agent": "supervisor",
+              "name": "booking_ref_auto_filled",
+              "detail": "compute_care_entitlements called without booking_ref, used the only case PGB3K1"
+            }
+          ]
+        }
+      },
+      {
+        "passenger": "Yes, please book it.",
+        "assistant": "You are successfully booked on flight **AU402/AU431** (connecting via MXP), departing Rome on 2026-10-06 at 17:26 and arriving in Paris at 23:26.\n\nRegarding your care entitlements due to the wait:\n- You are entitled to 1 meal voucher worth €15.\n- You are entitled to free communications (calls or emails).\nYou can collect your meal voucher at the Aurora Airways desk at the airport.\n\nRegarding compensation:\n- Because the cancellation was caused by a bird strike (an extraordinary circumstance outside the airline's control), you are not owed EU261 financial compensation. However, this does not affect the meals and care you are entitled to.\n\nYour case has now been closed. Is there anything else I can help you with today?",
+        "stats": {
+          "duration_ms": 27489,
+          "llm_calls": 6,
+          "input_tokens": 21651,
+          "output_tokens": 620,
+          "cost_usd": 0.009312,
+          "models": [
+            "gemini-3.5-flash-lite",
+            "openai/gpt-oss-120b",
+            "gemini-3.8-flash"
+          ],
+          "fallbacks": 5,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": true,
+              "duration_ms": 6
+            },
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": true,
+              "duration_ms": 2
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "duration_ms": 652
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "duration_ms": 629
+            },
+            {
+              "agent": "compensation",
+              "name": "calculate_compensation",
+              "ok": true,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": true,
+              "duration_ms": 4366
+            },
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "duration_ms": 4
+            }
+          ],
+          "guards": [
+            {
+              "agent": "supervisor",
+              "name": "booking_ref_auto_filled",
+              "detail": "compute_care_entitlements called without booking_ref, used the only case PGB3K1"
+            }
+          ]
+        }
+      },
+      {
+        "passenger": "Thank you, that's everything.",
+        "assistant": "You're very welcome, Paolo. Safe travels to Paris, and please don't hesitate to reach out if you need anything else in the future. Have a good flight!",
+        "stats": {
+          "duration_ms": 1379,
+          "llm_calls": 1,
+          "input_tokens": 5492,
+          "output_tokens": 36,
+          "cost_usd": 0.001738,
+          "models": [
+            "gemini-3.5-flash-lite"
+          ],
+          "fallbacks": 1,
+          "tools": [],
+          "guards": []
+        }
+      }
+    ]
+  }
+]
