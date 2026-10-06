@@ -24,6 +24,11 @@ langfuse = get_client()
 
 # The current turn's summary. A ContextVar is a global that is private to each request:
 # two passengers chatting at the same time each get their own TurnStats.
+# _current_stats is a box that holds one thing at a time: a single TurnStats, or None before a turn starts.
+# the box has 2 methods: get() returns the thing in the box, set(x) puts x in the box. The box is private to each request.
+# one box per message, meaning one turn (the passenger's message plus the assistant's reply).
+#And everything that runs during that turn uses the same box: every call_llm, every trace_tool (nested or not), every record_guard, in the supervisor and in both sub-agents.
+#A new box only appears when the next message arrives: main.py calls start_turn() again, which puts a fresh, empty TurnStats in.
 _current_stats: ContextVar[TurnStats | None] = ContextVar("current_stats", default=None)
 _turn_started: ContextVar[float] = ContextVar("turn_started", default=0.0)
 
@@ -84,6 +89,7 @@ def call_llm(agent: str, model: str, messages: list[dict], tools: list[dict], fa
     which model actually answered (fallbacks included), tokens, cost and latency.
     Exceptions are recorded and raised again, so each agent's own error handling still works.
     """
+    #here langfuse opens a new trace. Generation is called like that because it is a generation of text.
     with langfuse.start_as_current_observation(
         name=f"{agent}.llm",
         as_type="generation",
@@ -103,13 +109,14 @@ def call_llm(agent: str, model: str, messages: list[dict], tools: list[dict], fa
             raise
 
         served_model = response.model or model
+        #give me response.usage, but if response has no usage, give me None instead of crashing
         usage = getattr(response, "usage", None)
         input_tokens = getattr(usage, "prompt_tokens", 0) or 0
         output_tokens = getattr(usage, "completion_tokens", 0) or 0
         cost = response_cost(response)
         # The model we asked for, without its provider prefix, e.g. "gpt-oss-120b"
         fell_back = model.split("/")[-1] not in served_model
-
+        #here update hands off the info to langfuse.
         generation.update(
             model=served_model,
             output=reply_for_trace(response.choices[0].message),
@@ -140,12 +147,17 @@ def trace_tool(agent: str, name: str, arguments, run: Callable[[], dict]) -> dic
     The arguments are recorded again after the call, because code may have added to them
     (e.g. original_departure_local, or a booking_ref filled in by a guard).
     """
-    # perf_counter() is a high-resolution timer, good for measuring short durations.
     started = time.perf_counter()
     as_type = "agent" if name in AGENT_TOOLS else "tool"
 
+    # Add the tool to the turn summary NOW, when it starts, so the list is in the order the
+    # tools began (a sub-agent comes before the tools it calls). Its result is filled in at the end.
+    tool_use = ToolUse(agent=agent, name=name, ok=True, duration_ms=0)
+    stats = _current_stats.get()
+    if stats is not None:
+        stats.tools.append(tool_use)
+
     # Sub-agents pass the model's raw JSON text: show it as data, not as one long string
-    # So here we check if the instances come from sub-agents, and if so, we try to parse the arguments as JSON. If it fails, we just keep the original string.
     if isinstance(arguments, str):
         try:
             arguments = json.loads(arguments or "{}")
@@ -167,12 +179,10 @@ def trace_tool(agent: str, name: str, arguments, run: Callable[[], dict]) -> dic
             status_message=error,
         )
 
-    duration_ms = round((time.perf_counter() - started) * 1000)
+    # Now the tool has finished: fill in how it went
+    tool_use.ok = error is None
+    tool_use.duration_ms = round((time.perf_counter() - started) * 1000)
     print(f"TOOL CALL [{agent}]: {name}({preview(arguments)}) -> {preview(result)}")
-
-    stats = _current_stats.get()
-    if stats is not None:
-        stats.tools.append(ToolUse(agent=agent, name=name, ok=error is None, duration_ms=duration_ms))
 
     return result
 

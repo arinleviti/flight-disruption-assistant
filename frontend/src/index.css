@@ -1,10 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500&family=Atkinson+Hyperlegible+Next:wght@400;600;700&display=swap');
+
+/* Colour and type tokens. Everything in App.css uses these. */
+:root {
+  --sky: #eaf0f5;         /* page background */
+  --paper: #ffffff;       /* panels and messages */
+  --ink: #14213d;         /* main text */
+  --ink-soft: #52607a;    /* secondary text */
+  --line: #c9d6e2;        /* borders and the route line */
+  --route: #1d6f8c;       /* agents and the passenger's messages */
+  --route-soft: #e1eef3;
+  --on-route: #ffffff;    /* text on route-coloured backgrounds */
+  --amber: #f0a23b;       /* lit stops: like runway lights */
+  --amber-soft: #fdf0dc;
+  --alert: #c4473a;       /* refused or failed */
+  --alert-soft: #fbe7e3;
+
+  --font: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sky: #0f1a2c;
+    --paper: #17253b;
+    --ink: #e6edf5;
+    --ink-soft: #a3b2c6;
+    --line: #2e4260;
+    --route: #5fb4d3;
+    --route-soft: #1d3a4d;
+    --on-route: #0f1a2c;
+    --amber: #f3b25a;
+    --amber-soft: #3d2f18;
+    --alert: #f0806f;
+    --alert-soft: #3f2420;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #fff;
-  color: #1d232a;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  background: var(--sky);
+  color: var(--ink);
+}
+
+code {
+  font-family: var(--font-mono);
+}
+
+:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }

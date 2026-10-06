@@ -68,7 +68,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             answer_str = answer_request(request.message, history, cases)
         turn.update(output=answer_str)
         trace_id = langfuse.get_current_trace_id()
-
+    #this returns the updated stats with the time taken from the turn.
     stats = finish_turn()
 
     # The link to this turn in Langfuse. None if Langfuse isn't configured (or can't be reached).
@@ -83,4 +83,5 @@ def chat(request: ChatRequest) -> ChatResponse:
     history.append(Message(role="assistant", content=answer_str))
 
     conversations[request.session_id] = history
+    #here stats in sent to the frontend.
     return ChatResponse(reply=answer_str, session_id=request.session_id, stats=stats, trace_url=trace_url)
