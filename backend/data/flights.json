@@ -14,8 +14,13 @@
   { "flight_id": "F-025", "flight_no": "AU632",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 10, "departure_time": "07:30", "duration_minutes": 135, "seats_available": 20 },
   { "flight_id": "F-026", "flight_no": "AU634",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 10, "departure_time": "12:15", "duration_minutes": 135, "seats_available": 16 },
   { "flight_id": "F-027", "flight_no": "AU636",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 10, "departure_time": "18:40", "duration_minutes": 135, "seats_available": 28 },
+  { "flight_id": "F-033", "flight_no": "AU638",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 11, "departure_time": "07:30", "duration_minutes": 135, "seats_available": 24 },
+  { "flight_id": "F-035", "flight_no": "AU406/AU435", "origin": "FCO", "destination": "CDG", "via": "MXP", "departure_day": 11, "departure_time": "09:20", "duration_minutes": 330, "seats_available": 10 },
+  { "flight_id": "F-034", "flight_no": "AU650",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 11, "departure_time": "13:10", "duration_minutes": 135, "seats_available": 18 },
   { "flight_id": "F-028", "flight_no": "AU642",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 20, "departure_time": "08:00", "duration_minutes": 135, "seats_available": 35 },
   { "flight_id": "F-029", "flight_no": "AU644",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 20, "departure_time": "13:30", "duration_minutes": 135, "seats_available": 22 },
+  { "flight_id": "F-036", "flight_no": "AU646",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 21, "departure_time": "08:00", "duration_minutes": 135, "seats_available": 30 },
+  { "flight_id": "F-037", "flight_no": "AU648",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 21, "departure_time": "14:20", "duration_minutes": 135, "seats_available": 26 },
 
   { "flight_id": "F-006", "flight_no": "AU226",       "origin": "CDG", "destination": "LIS", "via": null,  "departure_offset_minutes": 240,  "duration_minutes": 165, "seats_available": 7 },
   { "flight_id": "F-007", "flight_no": "AU240/AU517", "origin": "CDG", "destination": "LIS", "via": "MAD", "departure_offset_minutes": 90,   "duration_minutes": 300, "seats_available": 15 },

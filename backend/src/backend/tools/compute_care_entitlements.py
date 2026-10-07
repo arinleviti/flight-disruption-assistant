@@ -121,7 +121,7 @@ COMPUTE_CARE_ENTITLEMENTS_TOOL = {
         "parameters": {
             "type": "object",
             "properties": {},
-            "required": [],
+            "required": ["booking_ref"],
         },
     },
 }

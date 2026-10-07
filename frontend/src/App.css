@@ -18,6 +18,21 @@
   border-bottom: 1px solid var(--line);
 }
 
+/* Logo next to the title */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 11px;
+  box-shadow: 0 0 0 1px var(--line); /* keeps the dark logo visible on the dark background */
+}
+
 .header h1 {
   margin: 0;
   font-size: 1.375rem;
@@ -125,8 +140,62 @@
   padding-bottom: 12px;
 }
 
+.how-to {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 0.9375rem;
+}
+
+.how-to li {
+  padding-left: 4px;
+  margin-bottom: 8px;
+}
+
+.how-to li:last-child {
+  margin-bottom: 0;
+}
+
+.how-to li::marker {
+  font-weight: 700;
+  color: var(--route);
+}
+
+.demo-bookings-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+}
+
+.demo-bookings-ask > span {
+  margin-right: 4px;
+  font-weight: 600;
+}
+
+/* "Cancelled flight" / "Delayed flight" / "No disruption" toggles */
+.kind-filter {
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.kind-filter:hover {
+  border-color: var(--route);
+}
+
+.kind-filter[aria-pressed='true'] {
+  background: var(--route);
+  border-color: var(--route);
+  color: var(--on-route);
+}
+
 .demo-bookings-hint {
-  margin: 0 0 6px;
+  margin: 6px 0 0 26px;
   font-size: 0.8125rem;
   color: var(--ink-soft);
 }
@@ -135,6 +204,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 10px;
+  padding-left: 26px; /* lines up with the text of step 2 */
 }
 
 /* A booking chip: reads like a boarding pass stub */
@@ -189,17 +260,8 @@
 /* ================================================================ empty conversation */
 
 .welcome {
-  max-width: 640px;
-  padding: 24px 0 8px;
-}
-
-.welcome h2 {
-  margin: 0 0 6px;
-  font-size: 1.25rem;
-}
-
-.welcome p {
-  margin: 0;
+  max-width: 62ch;
+  margin: 8px 0 0;
   color: var(--ink-soft);
 }
 
@@ -324,6 +386,10 @@ button:disabled {
   color: var(--alert);
 }
 
+.tool-list li.is-blocked code {
+  color: var(--ok);
+}
+
 .turn-details code {
   font-size: 0.8125rem;
   color: var(--ink);
@@ -347,7 +413,11 @@ button:disabled {
   color: var(--ink);
 }
 
-.badge-guard,
+.badge-guard {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
 .badge-error {
   background: var(--alert-soft);
   color: var(--alert);
@@ -536,6 +606,11 @@ button:disabled {
   font-weight: 600;
 }
 
+.stop-tag-blocked {
+  color: var(--ok);
+  font-weight: 600;
+}
+
 /* "AI agent" / "Tool" labels */
 .kind {
   display: inline-block;
@@ -587,6 +662,12 @@ button:disabled {
   color: var(--ink);
 }
 
+.stop.is-blocked > .stop-marker {
+  background: var(--ok-soft);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
 .stop.is-failed > .stop-marker {
   background: var(--alert-soft);
   border-color: var(--alert);
@@ -610,18 +691,64 @@ button:disabled {
   color: var(--ink);
 }
 
+/* Each box on the map is a button that opens its description */
+.stop-button {
+  display: block;
+  width: 100%;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stop-button:hover {
+  background: var(--route-soft);
+}
+
+.stop-button[aria-expanded='true'] .stop-name {
+  color: var(--ink);
+}
+
+/* Same look as the Details panel */
+.stop-description {
+  margin: 6px 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.hub-description {
+  margin: 0 0 12px;
+}
+
+.map-hint {
+  margin: 0 0 12px;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
 /* Safety checks under the map */
 .checks {
   margin-top: 14px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--alert-soft);
+  background: var(--ok-soft);
 }
 
 .checks h3 {
   margin: 0 0 4px;
   font-size: 0.875rem;
-  color: var(--alert);
+  color: var(--ok);
 }
 
 .checks ul {
@@ -656,6 +783,11 @@ button:disabled {
 .legend-dot.is-done {
   background: var(--amber-soft);
   border-color: var(--amber);
+}
+
+.legend-dot.is-blocked {
+  background: var(--ok-soft);
+  border-color: var(--ok);
 }
 
 .legend-dot.is-failed {

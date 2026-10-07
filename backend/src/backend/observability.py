@@ -37,7 +37,8 @@ AGENT_TOOLS = {"rebooking_agent", "compensation_agent"}
 
 LOG_PREVIEW_CHARS = 300  # the terminal shows a short preview; Langfuse keeps the full result
 
-
+#start_turn() and finish_turn() deal only with the TurnStats, 
+# the summary that goes to the frontend (the Details dropdown and the route map). They don't touch Langfuse at all.
 def start_turn() -> TurnStats:
     """Start counting a new turn. Called once per /chat request, before answer_request."""
     stats = TurnStats()
@@ -90,6 +91,8 @@ def call_llm(agent: str, model: str, messages: list[dict], tools: list[dict], fa
     Exceptions are recorded and raised again, so each agent's own error handling still works.
     """
     #here langfuse opens a new trace. Generation is called like that because it is a generation of text.
+    # start_as_current_observation (with a with block): for a step that takes time and where other steps can happen inside it. 
+    # Everything recorded during the block is nested under it. Examples: chat_turn, trace_tool.
     with langfuse.start_as_current_observation(
         name=f"{agent}.llm",
         as_type="generation",
@@ -154,8 +157,10 @@ def trace_tool(agent: str, name: str, arguments, run: Callable[[], dict]) -> dic
     # tools began (a sub-agent comes before the tools it calls). Its result is filled in at the end.
     tool_use = ToolUse(agent=agent, name=name, ok=True, duration_ms=0)
     stats = _current_stats.get()
+    guards_before = 0
     if stats is not None:
         stats.tools.append(tool_use)
+        guards_before = len(stats.guards)
 
     # Sub-agents pass the model's raw JSON text: show it as data, not as one long string
     if isinstance(arguments, str):
@@ -182,6 +187,10 @@ def trace_tool(agent: str, name: str, arguments, run: Callable[[], dict]) -> dic
     # Now the tool has finished: fill in how it went
     tool_use.ok = error is None
     tool_use.duration_ms = round((time.perf_counter() - started) * 1000)
+    # A safety check fired while this tool ran, and the tool returned an error:
+    # the check stopped it on purpose, so it's not a failure
+    if error is not None and stats is not None and len(stats.guards) > guards_before:
+        tool_use.blocked = True
     print(f"TOOL CALL [{agent}]: {name}({preview(arguments)}) -> {preview(result)}")
 
     return result
@@ -194,6 +203,8 @@ def record_guard(agent: str, name: str, detail: str) -> None:
     and in the turn summary.
     """
     print(f"GUARD [{agent}] {name}: {detail}")
+    #here we don't use start_as_current_observation because we don't want to make a new trace, we just want to add a step to the current trace.
+    #start_observation is an instant event, with nothing inside it.
     langfuse.start_observation(
         name=name,
         as_type="guardrail",

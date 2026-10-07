@@ -22,7 +22,7 @@ TOOL_FUNCTIONS = {
     "search_flights": search_flights,
 }
 
-def run_tool(name: str, arguments_json: str) -> dict:
+def run_tool(name: str, arguments_json: str, earliest_departure: str = "") -> dict:
     function = TOOL_FUNCTIONS.get(name)
     if function is None:
         return {"error": f"Unknown tool '{name}'. Use only the tools you were given."}
@@ -33,12 +33,18 @@ def run_tool(name: str, arguments_json: str) -> dict:
     except json.JSONDecodeError:
         return {"error": "The tool arguments were not valid JSON."}
 
+    # Code, not the model, decides the earliest search date: never before the original flight's day.
+    # Both are local times written the same way ("2026-10-27 00:00"), so comparing the texts compares the times.
+    if name == "search_flights" and earliest_departure:
+        if arguments.get("depart_after", "") < earliest_departure:
+            arguments["depart_after"] = earliest_departure
+
     try:
         # turns that dictionary into named arguments and calls the function. For example, if arguments is {"booking_ref": "1254RF"}, it will call get_booking(booking_ref="1254RF").
         return function(**arguments)
     except Exception as e:
         return {"error": f"Tool '{name}' failed: {e}"}
-
+    
 def keep_found_flights(answer: RebookingResult, found_flights: dict[str, dict]) -> RebookingResult:
     """Keep only the options that search_flights really returned, with their details from the search.
 
@@ -60,6 +66,36 @@ def keep_found_flights(answer: RebookingResult, found_flights: dict[str, dict]) 
         recommended = kept[0].flight_id if kept else None
 
     return RebookingResult(options=kept, recommended_flight_id=recommended, reason=answer.reason)
+
+def drop_options_before_original(result: RebookingResult, original_departure_local: str) -> RebookingResult:
+    """A new flight can't leave on an earlier day than the flight it replaces: drop any option that does.
+
+    Same-day flights are kept, even if they leave a little earlier (a valid rerouting under EU261).
+    Both times are local times at the same origin airport, written the same way by to_local_time
+    ("2026-10-17 09:15"), so the first 10 characters are the date ("2026-10-17").
+    """
+    if not original_departure_local:
+        return result
+
+    original_date = original_departure_local[:10]
+    kept = []
+    for option in result.options:
+        departure_local = to_local_time(option.departure, option.origin)
+        if departure_local[:10] < original_date:
+            record_guard(
+                "rebooking",
+                "option_before_original_dropped",
+                f"{option.flight_no} leaves on {departure_local[:10]}, before the original flight's date ({original_date})",
+            )
+            continue
+        kept.append(option)
+
+    kept_ids = {option.flight_id for option in kept}
+    recommended = result.recommended_flight_id
+    if recommended not in kept_ids:
+        recommended = kept[0].flight_id if kept else None
+
+    return RebookingResult(options=kept, recommended_flight_id=recommended, reason=result.reason)
 
 def add_local_times(result: RebookingResult) -> dict:
     # The agent copies UTC times into its answer. Passengers need the time
@@ -119,6 +155,9 @@ def get_flights_options(
     # the agent is allowed to put in its answer
     found_flights: dict[str, dict] = {}
 
+        # The earliest the search may start: the start of the original flight's day
+    earliest_departure = original_departure_local[:10] + " 00:00" if original_departure_local else ""
+
     for _ in range(MAX_TOOL_ROUNDS):
         try:
             # Same as litellm.completion, but recorded in Langfuse and in the turn summary
@@ -160,6 +199,8 @@ def get_flights_options(
                 continue
             # Only flights the search really found, with their details from the database
             answer = keep_found_flights(answer, found_flights)
+            # Never offer a flight that leaves before the one it replaces
+            answer = drop_options_before_original(answer, original_departure_local)
             # A plain dict with local times added: the supervisor's json.dumps turns it into text for its model.
             return add_local_times(answer)
 
@@ -184,7 +225,7 @@ def get_flights_options(
                 "rebooking",
                 call.function.name,
                 call.function.arguments,
-                lambda call=call: run_tool(call.function.name, call.function.arguments),
+                lambda call=call: run_tool(call.function.name, call.function.arguments, earliest_departure),
             )
             # Remember every real flight the search returned
             for flight in result.get("flights", []):

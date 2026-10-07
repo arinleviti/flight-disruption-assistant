@@ -30,13 +30,14 @@ class Scenario:
     not_before_original_date: bool = False  # the booked flight can't leave before the original date
 
 
-# The usual messages for a cancellation: preferences in one go, accept, confirm, goodbye
+# The usual messages for a cancellation: preferences in one go, accept, confirm, compensation, goodbye
 def cancellation_script(ref: str, preferences: str) -> list[str]:
     return [
         f"Hi, my flight has been cancelled. My booking reference is {ref}.",
         preferences,
         "I'll take the option you recommend.",
         "Yes, please book it.",
+        "Yes, please check my compensation.",
         "Thank you, that's everything.",
     ]
 
@@ -46,9 +47,9 @@ def delay_script(ref: str) -> list[str]:
     return [
         f"Hi, my flight is delayed. My booking reference is {ref}.",
         "I'll keep my flight, thanks.",
+        "Yes, please check my compensation.",
         "Thank you, that's everything.",
     ]
-
 
 SCENARIOS = [
     Scenario(

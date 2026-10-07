@@ -224,7 +224,7 @@ def run_tool(name: str, arguments: dict | None, cases: dict[str, CaseState]) -> 
     # Guard: this booking is already in the case file, so don't look it up again.
     # Return what's stored instead of running the tool (saves a call and tokens).
     if name == "get_booking":
-        ref = normalize_ref(arguments["booking_ref"])
+        ref = normalize_ref(arguments.get("booking_ref", ""))
         case = cases.get(ref)
         if case and case.original_booking and case.passenger:
             record_guard("supervisor", "booking_from_case_file", f"get_booking({ref}) answered from the case file")
@@ -360,10 +360,10 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
                 empty_replies += 1
                 record_guard("supervisor", "empty_reply", "the model answered with nothing; asked it to write its reply")
                 messages.append({
-                    "role": "system",
+                    "role": "user",
                     "content": (
                         "Your last reply was empty. Write your reply to the passenger now, "
-                        "based on the tool results above. Do not call any tools."
+                        "based on the conversation and tool results so far. Do not call any tools."
                     ),
                 })
                 continue

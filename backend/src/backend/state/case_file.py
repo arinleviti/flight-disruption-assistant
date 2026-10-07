@@ -266,7 +266,9 @@ def case_file_summary(cases: dict[str, CaseState]) -> str:
     if not cases:
         lines.append("No booking identified yet.")
         return "\n".join(lines)
-
+    # cases.items() gives you each entry of the dict as a (key, value) pair. 
+    # Here the key is the booking reference (e.g. "ABC123") and the value is that booking's CaseState object.
+    #for ref, case in ... unpacks each pair into two variables in one step
     for ref, case in cases.items():
         lines.append("")
         lines.append(f"=== Booking {ref} ===")

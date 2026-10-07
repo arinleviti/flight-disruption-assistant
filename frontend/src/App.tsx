@@ -1,21 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import AgentMap from './AgentMap'
+import Logo from './Logo'
 import type { ChatResponse, Message, TurnStats } from './types'
 import './App.css'
 
 // The demo bookings. Clicking one adds its reference to the message box; the passenger
 // still writes their own message.
-const DEMO_BOOKINGS = [
-  { ref: 'AZX4K2', name: 'Marco', what: 'Cancelled: technical fault' },
-  { ref: 'BRT9Q7', name: 'Sophie', what: 'Delayed 5 h: storms' },
-  { ref: 'KMW3P8', name: 'Lukas', what: 'Cancelled: crew strike, wheelchair' },
-  { ref: 'GBX7T2', name: 'Giulia', what: 'Cancelled 10 days ahead' },
-  { ref: 'TMQ4L9', name: 'Thomas', what: 'Cancelled 20 days ahead' },
-  { ref: 'ACR5N8', name: 'Ana', what: 'Cancelled: air traffic control strike' },
-  { ref: 'ECW2H6', name: 'Emily', what: 'Delayed 4 h: long-haul' },
-  { ref: 'PGB3K1', name: 'Paolo', what: 'Cancelled: bird strike' },
-  { ref: 'LFD8V4', name: 'Luca', what: 'No disruption' },
+type BookingKind = 'cancelled' | 'delayed' | 'none'
+
+const DEMO_BOOKINGS: { ref: string; name: string; what: string; kind: BookingKind }[] = [
+  { ref: 'AZX4K2', name: 'Marco', what: 'Technical fault', kind: 'cancelled' },
+  { ref: 'KMW3P8', name: 'Lukas', what: 'Crew strike, wheelchair user', kind: 'cancelled' },
+  { ref: 'GBX7T2', name: 'Giulia', what: 'Cancelled 10 days ahead', kind: 'cancelled' },
+  { ref: 'TMQ4L9', name: 'Thomas', what: 'Cancelled 20 days ahead', kind: 'cancelled' },
+  { ref: 'ACR5N8', name: 'Ana', what: 'Air traffic control strike', kind: 'cancelled' },
+  { ref: 'PGB3K1', name: 'Paolo', what: 'Bird strike', kind: 'cancelled' },
+  { ref: 'BRT9Q7', name: 'Sophie', what: '5 hours, storms', kind: 'delayed' },
+  { ref: 'ECW2H6', name: 'Emily', what: '4 hours, long-haul', kind: 'delayed' },
+  { ref: 'LFD8V4', name: 'Luca', what: 'Flight operating normally', kind: 'none' },
+]
+
+const BOOKING_KINDS: { kind: BookingKind; label: string }[] = [
+  { kind: 'cancelled', label: 'Cancelled flight' },
+  { kind: 'delayed', label: 'Delayed flight' },
+  { kind: 'none', label: 'No disruption' },
 ]
 
 // The sub-agents: they are called like tools, but they are AI agents (LLMs) themselves
@@ -45,19 +54,22 @@ function TurnDetails({
   onReplay: () => void
 }) {
   const totalTokens = stats.input_tokens + stats.output_tokens
-  const failedTools = stats.tools.filter((tool) => !tool.ok).length
+  // Real failures only: a tool held back by a safety check is the check doing its job
+  const failedTools = stats.tools.filter((tool) => !tool.ok && !tool.blocked).length
+  const toolCount = stats.tools.length
 
   return (
     <details className="turn-details">
       <summary>
-        Details: {formatSeconds(stats.duration_ms)}, {stats.tools.length} tool calls, {totalTokens.toLocaleString()} tokens
+        Details: {formatSeconds(stats.duration_ms)}, {toolCount} tool call{toolCount === 1 ? '' : 's'},{' '}
+        {totalTokens.toLocaleString()} tokens
         {stats.fallbacks > 0 && <span className="badge badge-warning">fallback model</span>}
         {stats.guards.length > 0 && (
           <span className="badge badge-guard">
             {stats.guards.length} safety check{stats.guards.length > 1 ? 's' : ''}
           </span>
         )}
-        {failedTools > 0 && <span className="badge badge-error">{failedTools} refused</span>}
+        {failedTools > 0 && <span className="badge badge-error">{failedTools} failed</span>}
       </summary>
 
       <div className="details-body">
@@ -84,14 +96,15 @@ function TurnDetails({
             <h4>Tools and agents called, in order</h4>
             <ol className="tool-list">
               {stats.tools.map((tool, index) => (
-                <li key={index} className={tool.ok ? '' : 'is-failed'}>
+                <li key={index} className={tool.ok ? '' : tool.blocked ? 'is-blocked' : 'is-failed'}>
                   <code>{tool.name}</code>
                   <span className={`kind kind-${AGENT_TOOLS.has(tool.name) ? 'agent' : 'tool'}`}>
                     {AGENT_TOOLS.has(tool.name) ? 'AI agent' : 'Tool'}
                   </span>
                   <span className="muted">
                     called by {tool.agent === 'supervisor' ? 'the supervisor' : `the ${tool.agent} agent`},{' '}
-                    {tool.duration_ms} ms{tool.ok ? '' : ', refused or failed'}
+                    {tool.duration_ms} ms
+                    {!tool.ok && (tool.blocked ? ', held by a safety check' : ', failed')}
                   </span>
                 </li>
               ))}
@@ -140,6 +153,8 @@ export default function App() {
   const [replayKey, setReplayKey] = useState(0)
   // On small screens the map is hidden behind a toggle
   const [mapOpen, setMapOpen] = useState(false)
+  // Which demo bookings are shown: none until the visitor picks a kind
+  const [bookingKind, setBookingKind] = useState<BookingKind | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -203,12 +218,15 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <div>
-          <h1>Aurora Airways disruption assistant</h1>
-          <p className="tagline">
-            A supervisor agent working with a rebooking agent and an EU261 compensation agent. Fictional airline,
-            demo data.
-          </p>
+        <div className="brand">
+          <Logo className="brand-logo" />
+          <div>
+            <h1>Aurora Airways disruption assistant</h1>
+            <p className="tagline">
+              A supervisor agent working with a rebooking agent and an EU261 compensation agent. Fictional airline,
+              demo data.
+            </p>
+          </div>
         </div>
         <button className="button-secondary" onClick={startNewConversation} disabled={loading}>
           New conversation
@@ -218,36 +236,56 @@ export default function App() {
       <div className="layout">
         <section className="chat" aria-label="Conversation">
           <div className="demo-bookings">
-            <p className="demo-bookings-hint">Demo bookings: click one to add its reference to your message.</p>
-            <div className="demo-bookings-list">
-              {DEMO_BOOKINGS.map((booking) => (
-                <button
-                  key={booking.ref}
-                  type="button"
-                  className="booking-chip"
-                  onClick={() => addReference(booking.ref)}
-                  disabled={loading}
-                >
-                  <span className="booking-chip-top">
-                    <span className="booking-chip-name">{booking.name}</span>
-                    <code>{booking.ref}</code>
-                  </span>
-                  <span className="booking-chip-what">{booking.what}</span>
-                </button>
-              ))}
-            </div>
+            <ol className="how-to">
+              <li>Tell the assistant what happened to your flight: cancelled, delayed, or no problem at all.</li>
+              <li>
+                <div className="demo-bookings-ask">
+                  <span>Need a booking reference?</span>
+                  {BOOKING_KINDS.map(({ kind, label }) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      className="kind-filter"
+                      aria-pressed={bookingKind === kind}
+                      onClick={() => setBookingKind((current) => (current === kind ? null : kind))}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </li>
+            </ol>
+
+            {bookingKind && (
+              <>
+                <div className="demo-bookings-list">
+                  {DEMO_BOOKINGS.filter((booking) => booking.kind === bookingKind).map((booking) => (
+                    <button
+                      key={booking.ref}
+                      type="button"
+                      className="booking-chip"
+                      onClick={() => addReference(booking.ref)}
+                      disabled={loading}
+                    >
+                      <span className="booking-chip-top">
+                        <span className="booking-chip-name">{booking.name}</span>
+                        <code>{booking.ref}</code>
+                      </span>
+                      <span className="booking-chip-what">{booking.what}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="demo-bookings-hint">Click one to add its reference to your message.</p>
+              </>
+            )}
           </div>
 
           <main className="messages">
             {messages.length === 0 && (
-              <div className="welcome">
-                <h2>Tell the assistant what happened to your flight</h2>
-                <p>
-                  For example: "My flight has been cancelled, my booking reference is AZX4K2." Use one of the demo
-                  bookings above, or any reference you like. Under each reply, open Details to see the tools, tokens
-                  and safety checks behind it.
-                </p>
-              </div>
+              <p className="welcome">
+                For example: "My flight has been cancelled." Under each reply, open
+                Details to see the tools, tokens and safety checks behind it.
+              </p>
             )}
 
             {messages.map((message, index) =>

@@ -19,6 +19,7 @@ class ToolUse(BaseModel):
     agent: str          # who called it: supervisor, rebooking or compensation
     name: str           # e.g. get_booking, search_flights
     ok: bool            # False if the tool (or a guard) returned an error
+    blocked: bool = False  # True if a safety check stopped it on purpose (not a failure)
     duration_ms: int
 
 

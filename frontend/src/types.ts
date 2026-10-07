@@ -4,6 +4,7 @@ export type ToolUse = {
   agent: string
   name: string
   ok: boolean
+  blocked?: boolean   // stopped on purpose by a safety check, not a failure
   duration_ms: number
 }
 
