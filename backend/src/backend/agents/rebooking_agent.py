@@ -7,11 +7,8 @@ from backend.observability import call_llm, record_guard, trace_tool
 import json
 from pydantic import ValidationError
 
-MODEL = "groq/openai/gpt-oss-120b"
-FALLBACK_MODELS = [
-    "gemini/gemini-3.5-flash-lite",
-    "gemini/gemini-3.8-flash"
-]
+MODEL = "groq/openai/gpt-oss-20b"           # Smaller Groq, not free, paid but cheaper.
+FALLBACK_MODELS = ["groq/openai/gpt-oss-120b"]  # paid Groq if Gemini is busy or out of quota
 NUM_RETRIES = 0
 MAX_TOOL_ROUNDS = 6  # safety limit: stop if the model keeps calling tools
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "rebooking_system.md"

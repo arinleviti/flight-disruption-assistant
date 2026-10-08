@@ -9,6 +9,10 @@ from backend.tools.time_utils import AIRPORT_TIMEZONES, to_local_time
 # backend/src/backend/tools/compute_care_entitlements.py -> parents[3] is the backend root folder
 POLICY_PATH = Path(__file__).resolve().parents[3] / "data" / "care_policies.json"
 
+# A cancellation announced this many days ahead (or more) leaves nobody waiting at the airport:
+# the passenger simply travels on the new flight, so no meals or hotel are owed.
+ADVANCE_NOTICE_DAYS = 7
+
 
 def meal_threshold_minutes(distance_km: int) -> int:
     """EU261 Art. 6(1): how long a delay must last before meals are owed.
@@ -36,6 +40,8 @@ def compute_care_entitlements(case: CaseState) -> dict:
     - meals: always for a cancellation; for a delay, once the wait reaches the threshold
     - hotel + transport: when the new departure is at least the day after the original one
     - two communications whenever care applies
+    - none of the above for a cancellation announced ADVANCE_NOTICE_DAYS or more before departure:
+      the passenger isn't kept waiting at the airport (a simplification of EU261 Art. 9)
     The cause of the disruption does not matter: care is owed even in extraordinary circumstances.
     """
     booking = case.original_booking
@@ -62,15 +68,21 @@ def compute_care_entitlements(case: CaseState) -> dict:
 
     wait_minutes = max(0, int((new_departure - original_departure).total_seconds() // 60))
 
+    # How long before departure the passenger was told (same calculation as calculate_compensation)
+    notice_days = (original_departure - as_utc(disruption.announced_at)).total_seconds() / 86400
+
+    # Told well in advance: the passenger plans around the new flight and never waits at the airport
+    told_in_advance = disruption.type == "cancellation" and notice_days >= ADVANCE_NOTICE_DAYS
+
     # Meals: always for a cancellation, otherwise only above the threshold
     threshold = meal_threshold_minutes(booking.distance_km)
-    meals = disruption.type == "cancellation" or wait_minutes >= threshold
+    meals = not told_in_advance and (disruption.type == "cancellation" or wait_minutes >= threshold)
 
     # Hotel: count the nights in the departure airport's own calendar
     zone = ZoneInfo(AIRPORT_TIMEZONES[booking.origin])
     original_date = original_departure.astimezone(zone).date()
     new_date = new_departure.astimezone(zone).date()
-    hotel_nights = max(0, (new_date - original_date).days)
+    hotel_nights = 0 if told_in_advance else max(0, (new_date - original_date).days)
     transport = hotel_nights > 0
 
     communications = 2 if (meals or hotel_nights > 0) else 0
@@ -102,9 +114,15 @@ def compute_care_entitlements(case: CaseState) -> dict:
             "new_departure_local": to_local_time(new_departure, booking.origin),
             "wait_minutes": wait_minutes,
             "meal_threshold_minutes": threshold,
+            "notice_days": round(notice_days, 1),
             "based_on": based_on,
         },
-        "note": "Care is owed whatever the cause of the disruption, including extraordinary circumstances.",
+        "note": (
+            f"No meals or hotel: the cancellation was announced {round(notice_days)} days before departure, "
+            "so the passenger is not kept waiting at the airport."
+            if told_in_advance
+            else "Care is owed whatever the cause of the disruption, including extraordinary circumstances."
+        ),
     }
 
 
@@ -115,12 +133,17 @@ COMPUTE_CARE_ENTITLEMENTS_TOOL = {
         "description": (
             "Works out the care the passenger is owed (meals, hotel nights, transport, "
             "communications) and the value of the vouchers at the departure airport. Reads "
-            "the booking, the disruption and the confirmed new flight from the case file, so "
-            "it takes no arguments. Returns an error if the passenger hasn't been rebooked yet."
+            "the booking, the disruption and the confirmed new flight from the case file of the "
+            "given booking reference. Returns an error if the passenger hasn't been rebooked yet."
         ),
         "parameters": {
             "type": "object",
-            "properties": {},
+            "properties": {
+                "booking_ref": {
+                    "type": "string",
+                    "description": "The booking reference of the case, e.g. AZX4K2.",
+                },
+            },
             "required": ["booking_ref"],
         },
     },

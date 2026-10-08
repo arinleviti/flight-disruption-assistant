@@ -1,0 +1,1013 @@
+[
+  {
+    "ref": "AZX4K2",
+    "title": "Marco · technical fault, cancelled",
+    "checks": [
+      {
+        "check": "booking loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "disruption loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "new flight booked",
+        "passed": true,
+        "detail": "AU402/AU431"
+      },
+      {
+        "check": "booked exactly once",
+        "passed": true,
+        "detail": "record_rebooking succeeded 1 time(s)"
+      },
+      {
+        "check": "care worked out",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "compensation assessed",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "extraordinary judgment",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "eligibility",
+        "passed": true,
+        "detail": "expected True, got True"
+      },
+      {
+        "check": "amount",
+        "passed": true,
+        "detail": "expected one of [125, 250], got 250"
+      },
+      {
+        "check": "case closed",
+        "passed": true,
+        "detail": "status: closed"
+      },
+      {
+        "check": "no invented flights in replies",
+        "passed": true,
+        "detail": ""
+      }
+    ],
+    "totals": {
+      "seconds": 13.6,
+      "llm_calls": 18,
+      "tokens": 89320,
+      "cost_usd": 0.0063,
+      "fallbacks": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "guards": {
+        "booking_not_confirmed": 1
+      }
+    },
+    "turns": [
+      {
+        "passenger": "Hi, my flight has been cancelled. My booking reference is AZX4K2.",
+        "assistant": "I found your booking, Marco Rossi: flight AU610 from Rome–Fiumicino (FCO) to Paris‑Charles de Gibson (CDG) on 08 October 2026, scheduled to depart at 12:34 and arrive at 14:49. That flight has been cancelled due to a technical fault (hydraulic system issue). \n\nCould you let me know what you’d prefer next?  \n- When would you like to travel (the same day, the next, or a different date)?  \n- Do you want the earliest available flight, or do you have a specific departure time in mind?  \n- Would you rather fly direct or are you comfortable with a connection?  \n- Do you need any special assistance?  \n\nLet me know, and I’ll find the best options for you.",
+        "stats": {
+          "duration_ms": 2209,
+          "llm_calls": 3,
+          "input_tokens": 14463,
+          "output_tokens": 378,
+          "cost_usd": 0.001198,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "get_booking",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "get_disruption",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "The earliest available flight please. Connections are fine and I don't need any assistance.",
+        "assistant": "Here are the best alternatives that match your request (earliest flight, connections allowed):\n\n**Recommended – Flight AU402/AU431**  \n• 08 Oct 2026 – depart 14:04 FCO, arrive 20:04 CDG (via MXP)\n\n**Option 2 – Flight AU614**  \n• 08 Oct 2026 – depart 17:04 FCO, arrive 19:19 CDG (direct)\n\n**Option 3 – Flight AU618**  \n• 08 Oct 2026 – depart 21:45 FCO, arrive 00:00 CDG (direct)\n\nWhich of these would you like to book?",
+        "stats": {
+          "duration_ms": 5243,
+          "llm_calls": 4,
+          "input_tokens": 16309,
+          "output_tokens": 2604,
+          "cost_usd": 0.001774,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "rebooking_agent",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 3763
+            },
+            {
+              "agent": "rebooking",
+              "name": "search_flights",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 4
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "I'll take the option you recommend.",
+        "assistant": "Just to confirm: I would book you on flight AU402/AU431 on 08 October 2026, departing Rome–Fiumicino at 14:04 and arriving Paris‑Charles de Gibson at 20:04 (via Milan‑MXP).  \nIs that fine?",
+        "stats": {
+          "duration_ms": 1307,
+          "llm_calls": 2,
+          "input_tokens": 11035,
+          "output_tokens": 177,
+          "cost_usd": 0.000707,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": false,
+              "blocked": true,
+              "duration_ms": 2
+            }
+          ],
+          "guards": [
+            {
+              "agent": "supervisor",
+              "name": "booking_not_confirmed",
+              "detail": "AU402/AU431 was not confirmed on its own"
+            }
+          ]
+        }
+      },
+      {
+        "passenger": "Yes, please book it.",
+        "assistant": "Your new flight is confirmed:  \n**Flight AU402/AU431** – depart Rome–Fiumicino (FCO) 14:04, arrive Paris‑Charles de Gibson (CDG) 20:04 on 08 October 2026 (via Milan MXP).  \n\nYou will receive a meal voucher (1 × €15) for the delay, and two free email/phone contacts while you wait.  \n\nWould you like me to check whether you’re entitled to compensation under EU Regulation 261/2004?",
+        "stats": {
+          "duration_ms": 1604,
+          "llm_calls": 3,
+          "input_tokens": 17203,
+          "output_tokens": 261,
+          "cost_usd": 0.001022,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 3
+            },
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Yes, please check my compensation.",
+        "assistant": "You are entitled to €250 compensation because the cancellation was caused by a hydraulic fault found during the pre‑flight inspection – a normal technical issue.  \nYour new flight, care and the compensation amount are all set. Is there anything else I can help you with?",
+        "stats": {
+          "duration_ms": 2724,
+          "llm_calls": 5,
+          "input_tokens": 20253,
+          "output_tokens": 552,
+          "cost_usd": 0.001281,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1154
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 153
+            },
+            {
+              "agent": "compensation",
+              "name": "calculate_compensation",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 0
+            },
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 2
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Thank you, that's everything.",
+        "assistant": "All set, Marco. Your case is complete. If anything else comes up, feel free to let me know. Have a good journey!",
+        "stats": {
+          "duration_ms": 556,
+          "llm_calls": 1,
+          "input_tokens": 5960,
+          "output_tokens": 125,
+          "cost_usd": 0.000312,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [],
+          "guards": []
+        }
+      }
+    ]
+  },
+  {
+    "ref": "BRT9Q7",
+    "title": "Sophie · storm, delayed 5 h",
+    "checks": [
+      {
+        "check": "booking loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "disruption loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "original flight kept",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "care worked out",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "compensation assessed",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "extraordinary judgment",
+        "passed": true,
+        "detail": "expected True, got True"
+      },
+      {
+        "check": "eligibility",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "amount",
+        "passed": true,
+        "detail": "expected one of [0], got 0"
+      },
+      {
+        "check": "case closed",
+        "passed": true,
+        "detail": "status: closed"
+      },
+      {
+        "check": "no invented flights in replies",
+        "passed": true,
+        "detail": ""
+      }
+    ],
+    "totals": {
+      "seconds": 6.9,
+      "llm_calls": 11,
+      "tokens": 49741,
+      "cost_usd": 0.0032,
+      "fallbacks": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "guards": {}
+    },
+    "turns": [
+      {
+        "passenger": "Hi, my flight is delayed. My booking reference is BRT9Q7.",
+        "assistant": "I’ve got the details for your booking, Sophie – your flight AU224 from Paris (CDG) to Lisbon (LIS) was scheduled to depart at 11:04 LHR and arrive at 12:49 Lisbon, but it’s now delayed by 5 hours. The expected new departure is 16:04 and arrival 17:49 Lisbon.\n\nWould you prefer to keep this delayed flight, or would you like me to look for alternative flights? If you’d like alternatives, could you let me know if you have a preferred departure time or day, whether you’d like a direct flight only, and if you need any special assistance?",
+        "stats": {
+          "duration_ms": 1727,
+          "llm_calls": 3,
+          "input_tokens": 14496,
+          "output_tokens": 433,
+          "cost_usd": 0.000794,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "get_booking",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "get_disruption",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "I'll keep my flight, thanks.",
+        "assistant": "You’re still on the original flight, now set to leave at 16:04 and arrive at 17:49 Lisbon. Because the delay is over 2 hours, you are entitled to a €18 meal voucher (available at the airport lounge). There are no hotel nights or transport entitlements. You can also use two free Aurora Airways communications (phone or email) during the delay.\n\nWould you like me to check whether you’re entitled to EU 261 compensation for this disruption?",
+        "stats": {
+          "duration_ms": 1331,
+          "llm_calls": 2,
+          "input_tokens": 10119,
+          "output_tokens": 342,
+          "cost_usd": 0.000516,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Yes, please check my compensation.",
+        "assistant": "I’m sorry for the inconvenience, but for this delay you are not entitled to EU 261 compensation. The 5‑hour delay was caused by severe thunderstorms that forced air‑traffic control to suspend departures, which is considered an extraordinary circumstance outside the airline’s control. You can, however, still use the meal voucher and free communications we’ve already arranged.\n\nIs there anything else I can help you with regarding your travel plans?",
+        "stats": {
+          "duration_ms": 2517,
+          "llm_calls": 4,
+          "input_tokens": 12467,
+          "output_tokens": 776,
+          "cost_usd": 0.000995,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1126
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 139
+            },
+            {
+              "agent": "compensation",
+              "name": "calculate_compensation",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 0
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Thank you, that's everything.",
+        "assistant": "Your case is now closed. You are not entitled to EU 261 compensation for this delay. Thank you for traveling with Aurora Airways. Is there anything else I can help you with?",
+        "stats": {
+          "duration_ms": 1326,
+          "llm_calls": 2,
+          "input_tokens": 10896,
+          "output_tokens": 212,
+          "cost_usd": 0.000881,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 2
+            }
+          ],
+          "guards": []
+        }
+      }
+    ]
+  },
+  {
+    "ref": "KMW3P8",
+    "title": "Lukas · own crew strike, wheelchair",
+    "checks": [
+      {
+        "check": "booking loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "disruption loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "new flight booked",
+        "passed": true,
+        "detail": "AU903"
+      },
+      {
+        "check": "booked exactly once",
+        "passed": false,
+        "detail": "record_rebooking succeeded 2 time(s)"
+      },
+      {
+        "check": "booked flight is direct",
+        "passed": true,
+        "detail": "direct"
+      },
+      {
+        "check": "care worked out",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "compensation assessed",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "extraordinary judgment",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "eligibility",
+        "passed": true,
+        "detail": "expected True, got True"
+      },
+      {
+        "check": "amount",
+        "passed": true,
+        "detail": "expected one of [300, 600], got 600"
+      },
+      {
+        "check": "case closed",
+        "passed": true,
+        "detail": "status: closed"
+      },
+      {
+        "check": "no invented flights in replies",
+        "passed": true,
+        "detail": ""
+      }
+    ],
+    "totals": {
+      "seconds": 14.8,
+      "llm_calls": 19,
+      "tokens": 94168,
+      "cost_usd": 0.0069,
+      "fallbacks": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "guards": {
+        "booking_not_confirmed": 1
+      }
+    },
+    "turns": [
+      {
+        "passenger": "Hi, my flight has been cancelled. My booking reference is KMW3P8.",
+        "assistant": "I found your booking, Lukas: flight AU901 from Rome FCO to New York JFK on 08 Oct 2026 at 10:34 local time. That flight has been cancelled because of cabin‑crew industrial action.\n\nHere are the first three replacement options that best match your wheelchair assistance needs:\n\n1. **Recommended – AU903** – 09 Oct 2026, 10:15 – 14:05 (Direct)  \n2. **AU907** – 09 Oct 2026, 16:30 – 20:20 (Direct)  \n3. **AU905** – 10 Oct 2026, 10:15 – 14:05 (Direct)\n\nWhich flight would you like to book?",
+        "stats": {
+          "duration_ms": 5793,
+          "llm_calls": 6,
+          "input_tokens": 24255,
+          "output_tokens": 2504,
+          "cost_usd": 0.002226,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "get_booking",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 2
+            },
+            {
+              "agent": "supervisor",
+              "name": "get_disruption",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "rebooking_agent",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 2940
+            },
+            {
+              "agent": "rebooking",
+              "name": "search_flights",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 2
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "A direct flight please, as early as possible. Yes, I still need wheelchair assistance.",
+        "assistant": "Just to be clear, you would like to be rebooked on flight **AU903** – a direct flight from Rome FCO on **09 Oct 2026** at **10:15**, arriving at New York JFK at **14:05** local time. Is that correct?",
+        "stats": {
+          "duration_ms": 1381,
+          "llm_calls": 2,
+          "input_tokens": 10617,
+          "output_tokens": 213,
+          "cost_usd": 0.00085,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": false,
+              "blocked": true,
+              "duration_ms": 2
+            }
+          ],
+          "guards": [
+            {
+              "agent": "supervisor",
+              "name": "booking_not_confirmed",
+              "detail": "AU903 was not confirmed on its own"
+            }
+          ]
+        }
+      },
+      {
+        "passenger": "I'll take the option you recommend.",
+        "assistant": "Your new flight has been confirmed:\n\n- **Flight AU903**  \n- **Departure:** 09 Oct 2026 at 10:15 Rome (FCO)  \n- **Arrival:** 09 Oct 2026 at 14:05 New York (JFK)\n\n**Care entitlements**\n\n| Service | Details |\n|---------|---------|\n| Meals | 4 vouchers, €15 each, to be collected at the airport |\n| Hotel | 1 night at a nearby hotel (you can check in at the Aurora Airways desk) |\n| Transport | 1 voucher, €30, for airport‑to‑hotel or hotel‑to‑airport travel |\n| Communications | 2 free calls or emails from the airport desk |\n\nYour wheelchair assistance will be available on the new flight.  \n\nWould you like me to check whether you are entitled to EU 261 compensation for this cancellation?",
+        "stats": {
+          "duration_ms": 2031,
+          "llm_calls": 3,
+          "input_tokens": 16567,
+          "output_tokens": 319,
+          "cost_usd": 0.001338,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 4
+            },
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Yes, please book it.",
+        "assistant": "Your flight has been re‑booked and everything is now settled:\n\n- **New flight:** AU903 from Rome (FCO) on 09 Oct 2026 at 10:15, arriving at New York (JFK) at 14:05.\n- **Care:** 4 meal vouchers (15 € each), 1 hotel night, a 30 € transport voucher, and 2 free calls/emails – all collected at the Aurora Airways desk at the airport.\n- **Compensation:** You are entitled to 600 € under EU 261.\n\nYour case is now closed. If there’s anything else I can help you with, just let me know. Safe travels!",
+        "stats": {
+          "duration_ms": 4066,
+          "llm_calls": 6,
+          "input_tokens": 26230,
+          "output_tokens": 1265,
+          "cost_usd": 0.001789,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 2
+            },
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1146
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 149
+            },
+            {
+              "agent": "compensation",
+              "name": "calculate_compensation",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 0
+            },
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Yes, please check my compensation.",
+        "assistant": "Your compensation is **600 EUR** because the cancellation was caused by cabin‑crew industrial action, which is not an extraordinary circumstance.  \nThis case is now closed. Let me know if there’s anything else I can help you with.",
+        "stats": {
+          "duration_ms": 611,
+          "llm_calls": 1,
+          "input_tokens": 5932,
+          "output_tokens": 194,
+          "cost_usd": 0.00033,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Thank you, that's everything.",
+        "assistant": "You’re very welcome! If anything else comes up, feel free to let me know. Have a great trip!",
+        "stats": {
+          "duration_ms": 944,
+          "llm_calls": 1,
+          "input_tokens": 5997,
+          "output_tokens": 75,
+          "cost_usd": 0.000395,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [],
+          "guards": []
+        }
+      }
+    ]
+  },
+  {
+    "ref": "TMQ4L9",
+    "title": "Thomas · schedule change, 20 days ahead",
+    "checks": [
+      {
+        "check": "booking loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "disruption loaded",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "new flight booked",
+        "passed": true,
+        "detail": "AU642"
+      },
+      {
+        "check": "booked exactly once",
+        "passed": true,
+        "detail": "record_rebooking succeeded 1 time(s)"
+      },
+      {
+        "check": "not before the original date",
+        "passed": true,
+        "detail": "original 2026-10-28, booked 2026-10-28"
+      },
+      {
+        "check": "care worked out",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "compensation assessed",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "check": "extraordinary judgment",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "eligibility",
+        "passed": true,
+        "detail": "expected False, got False"
+      },
+      {
+        "check": "amount",
+        "passed": true,
+        "detail": "expected one of [0], got 0"
+      },
+      {
+        "check": "case closed",
+        "passed": true,
+        "detail": "status: closed"
+      },
+      {
+        "check": "no invented flights in replies",
+        "passed": true,
+        "detail": ""
+      }
+    ],
+    "totals": {
+      "seconds": 12.6,
+      "llm_calls": 19,
+      "tokens": 84940,
+      "cost_usd": 0.0058,
+      "fallbacks": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "guards": {
+        "booking_not_confirmed": 1
+      }
+    },
+    "turns": [
+      {
+        "passenger": "Hi, my flight has been cancelled. My booking reference is TMQ4L9.",
+        "assistant": "I found your booking, Thomas: flight AU640 from Rome (FCO) to Paris (CDG) on 28 Oct at 11:20 local time, which has been cancelled due to a schedule change. To find a suitable replacement, could you let me know:\n\n* What date you’d like to travel (or if you’d prefer the same 28 Oct);\n* Any timing preference (earliest possible, morning, afternoon, evening);\n* Whether you need a direct flight or are fine with a connection;\n* If you require any special assistance.\n\nOnce I have those details, I’ll look at the best options for you.",
+        "stats": {
+          "duration_ms": 2332,
+          "llm_calls": 3,
+          "input_tokens": 14444,
+          "output_tokens": 704,
+          "cost_usd": 0.001044,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "get_booking",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            },
+            {
+              "agent": "supervisor",
+              "name": "get_disruption",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "A flight on the same day as my original one please, any time is fine. Direct only, and I don't need any assistance.",
+        "assistant": "**Here are your best direct options for 28 Oct:**\n\n**1. Recommended – AU642**  \n• Departure: 28 Oct 08:00 local  \n• Arrival: 28 Oct 10:15 local  \n\n**2. Alternative – AU644**  \n• Departure: 28 Oct 13:30 local  \n• Arrival: 28 Oct 15:45 local  \n\nWhich flight would you prefer?",
+        "stats": {
+          "duration_ms": 3512,
+          "llm_calls": 4,
+          "input_tokens": 13839,
+          "output_tokens": 1288,
+          "cost_usd": 0.001174,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "rebooking_agent",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 2136
+            },
+            {
+              "agent": "rebooking",
+              "name": "search_flights",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 2
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "I'll take the option you recommend.",
+        "assistant": "Just to confirm, you would like to be re‑booked on **AU642** departing Rome (FCO) on **28 Oct at 08:00 local** and arriving in Paris (CDG) at **10:15 local**. Is that correct?",
+        "stats": {
+          "duration_ms": 1068,
+          "llm_calls": 2,
+          "input_tokens": 10413,
+          "output_tokens": 159,
+          "cost_usd": 0.000656,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": false,
+              "blocked": true,
+              "duration_ms": 1
+            }
+          ],
+          "guards": [
+            {
+              "agent": "supervisor",
+              "name": "booking_not_confirmed",
+              "detail": "AU642 was not confirmed on its own"
+            }
+          ]
+        }
+      },
+      {
+        "passenger": "Yes, please book it.",
+        "assistant": "Your flight has been re‑booked on **AU642** departing Rome (FCO) on **28 Oct at 08:00 local** and arriving in Paris (CDG) at **10:15 local**.  \n\nBecause the cancellation was announced 20 days before departure, you are not entitled to meals or a hotel stay. No transport or communication vouchers are required.  \n\nWould you like me to check whether you are entitled to compensation under EU Regulation 261/2004?",
+        "stats": {
+          "duration_ms": 1982,
+          "llm_calls": 3,
+          "input_tokens": 16260,
+          "output_tokens": 413,
+          "cost_usd": 0.001238,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "record_rebooking",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 4
+            },
+            {
+              "agent": "supervisor",
+              "name": "compute_care_entitlements",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Yes, please check my compensation.",
+        "assistant": "Your case is now closed. Since the cancellation was a commercial decision announced more than two weeks in advance, you are not entitled to compensation. You’re already booked on AU642 for 28 Oct at 08:00 local, and no care entitlements apply.  \n\nIs there anything else I can help you with?",
+        "stats": {
+          "duration_ms": 3293,
+          "llm_calls": 6,
+          "input_tokens": 21120,
+          "output_tokens": 649,
+          "cost_usd": 0.001434,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [
+            {
+              "agent": "supervisor",
+              "name": "compensation_agent",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 1760
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 156
+            },
+            {
+              "agent": "compensation",
+              "name": "search_regulations",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 149
+            },
+            {
+              "agent": "compensation",
+              "name": "calculate_compensation",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 0
+            },
+            {
+              "agent": "supervisor",
+              "name": "close_case",
+              "ok": true,
+              "blocked": false,
+              "duration_ms": 2
+            }
+          ],
+          "guards": []
+        }
+      },
+      {
+        "passenger": "Thank you, that's everything.",
+        "assistant": "You’re welcome, Thomas. Have a pleasant journey, and feel free to reach out if you need anything else. Safe travels!",
+        "stats": {
+          "duration_ms": 390,
+          "llm_calls": 1,
+          "input_tokens": 5606,
+          "output_tokens": 45,
+          "cost_usd": 0.000261,
+          "models": [
+            "openai/gpt-oss-20b"
+          ],
+          "fallbacks": 0,
+          "tools": [],
+          "guards": []
+        }
+      }
+    ]
+  }
+]

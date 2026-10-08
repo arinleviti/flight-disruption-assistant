@@ -9,13 +9,10 @@ from backend.observability import call_llm, record_guard, trace_tool
 from backend.tools.calculate_compensation import calculate_compensation
 from backend.tools.search_regulations import SEARCH_REGULATIONS_TOOL, search_regulations
 
-MODEL = "groq/openai/gpt-oss-120b"
-FALLBACK_MODELS = [
-    "gemini/gemini-3.5-flash-lite",
-    "gemini/gemini-3.8-flash",
-]
+MODEL = "groq/openai/gpt-oss-20b"           
+FALLBACK_MODELS = ["groq/openai/gpt-oss-120b"]  
 NUM_RETRIES = 0
-MAX_TOOL_ROUNDS = 6  # searches and format retries both count as rounds
+MAX_TOOL_ROUNDS = 6  # searches and format retries both count as rounds; the last round never searches
 
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "compensation_system.md"
 COMPENSATION_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
@@ -73,14 +70,26 @@ def assess_extraordinary(case: CaseState) -> ExtraordinaryAssessment | dict:
         {"role": "user", "content": json.dumps(request, ensure_ascii=False)},
     ]
 
-    for _ in range(MAX_TOOL_ROUNDS):
+    for round_number in range(MAX_TOOL_ROUNDS):
+        # Last round: no more searching. The tool is taken away, so the model has to answer
+        # with the passages it already has, instead of searching until it runs out of rounds.
+        last_round = round_number == MAX_TOOL_ROUNDS - 1
+        if last_round:
+            messages.append({
+                "role": "user",
+                "content": (
+                    "You have searched enough. Reply now with only the final JSON object, "
+                    "based on the passages you already found."
+                ),
+            })
+
         try:
             # Same as litellm.completion, but recorded in Langfuse and in the turn summary
             response = call_llm(
                 agent="compensation",
                 model=MODEL,
                 messages=messages,
-                tools=TOOL_SCHEMAS,
+                tools=None if last_round else TOOL_SCHEMAS,
                 fallbacks=FALLBACK_MODELS,
                 num_retries=NUM_RETRIES,
             )
@@ -146,7 +155,14 @@ def assess_extraordinary(case: CaseState) -> ExtraordinaryAssessment | dict:
             })
 
     record_guard("compensation", "max_rounds", f"no valid assessment after {MAX_TOOL_ROUNDS} rounds")
-    return {"error": "The compensation assessment could not be completed. Escalate to a human colleague."}
+    # No promise of a hand-over here: no tool can pass the case to a person, so the supervisor
+    # must not say it will. It tells the passenger to ask again instead.
+    return {
+        "error": (
+            "The compensation check could not be completed right now. Tell the passenger and "
+            "invite them to ask again in a moment. Do not say it will be passed to a colleague."
+        )
+    }
 
 
 def compensation_agent(case: CaseState) -> dict:

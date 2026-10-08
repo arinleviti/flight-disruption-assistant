@@ -22,10 +22,7 @@ from backend.state.case_file import (
 )
 
 MODEL = "groq/openai/gpt-oss-120b"
-FALLBACK_MODELS = [
-    "gemini/gemini-3.5-flash-lite",
-    "gemini/gemini-3.8-flash"
-]
+FALLBACK_MODELS = ["groq/openai/gpt-oss-20b"]
 NUM_RETRIES = 0
 MAX_TOOL_ROUNDS = 8  # safety limit: stop if the model keeps calling tools
 MAX_EMPTY_REPLIES = 1  # how many times we ask the model again when it answers with nothing
