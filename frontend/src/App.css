@@ -29,7 +29,7 @@
   flex: none;
   width: 48px;
   height: 48px;
-  border-radius: 11px;
+  border-radius: 11px; /* matches the logo's rounded corners */
   box-shadow: 0 0 0 1px var(--line); /* keeps the dark logo visible on the dark background */
 }
 
@@ -732,9 +732,30 @@ button:disabled {
 }
 
 .map-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0 0 12px;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--ink-soft);
+}
+
+/* The bulb slowly brightens and dims, with a soft amber glow. Turned off for reduced motion (index.css). */
+.hint-bulb {
+  font-size: 1.05rem;
+  animation: bulb-glow 2.8s ease-in-out infinite;
+}
+
+@keyframes bulb-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px var(--amber));
+  }
 }
 
 /* Safety checks under the map */

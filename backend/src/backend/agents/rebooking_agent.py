@@ -153,6 +153,8 @@ def get_flights_options(
     found_flights: dict[str, dict] = {}
 
         # The earliest the search may start: the start of the original flight's day
+        # [:10] the number 10 means "the first 10 characters of the string", which is the date in YYYY-MM-DD format.
+        #  The model may ask for flights "as soon as possible" or "tomorrow morning", but the search must never return a flight that leaves before the original flight's day.
     earliest_departure = original_departure_local[:10] + " 00:00" if original_departure_local else ""
 
     for _ in range(MAX_TOOL_ROUNDS):

@@ -84,6 +84,8 @@ const GUARD_LABELS: Record<string, string> = {
   unknown_booking: 'Model used a booking reference with no case',
   invalid_arguments: 'Model sent unreadable tool arguments',
   max_rounds: 'Stopped a turn that went on too long',
+  option_before_original_dropped: 'Dropped a flight on an earlier day than the original',
+  already_rebooked: 'Stopped a second booking of the same case',
 }
 
 type Status = 'idle' | 'active' | 'done' | 'blocked' | 'failed'
@@ -208,7 +210,11 @@ export default function AgentMap({ stats, replayKey, working }: Props) {
       </div>
       {openId === 'supervisor' && <p className="stop-description hub-description">{DESCRIPTIONS.supervisor}</p>}
 
-      <p className="map-hint">Click any box to see what it does.</p>
+      <p className="map-hint">
+        {/* Only the bulb glows: it fades in and out to draw the eye, the words stay still */}
+        <span className="hint-bulb" aria-hidden="true">💡</span>
+        Click any agent/tool to see what it does.
+      </p>
 
       <ol className="route">{ROUTE.map((stop, i) => renderStop(stop, i + 1))}</ol>
 

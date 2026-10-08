@@ -5,7 +5,6 @@ A multi-agent assistant for passengers whose flight was cancelled or delayed. It
 Aurora Airways is fictional and every booking is demo data. The interesting part is underneath: a hand-written orchestration loop, code guards around every action that matters, tracing, and an eval suite that drove the design decisions described below.
 
 ![Architecture](docs/architecture.png)
-Full architecture diagrams: [docs/Aurora_Airways_Architecture.pdf](docs/Aurora_Airways_Architecture.pdf)
 
 ---
 
@@ -36,21 +35,9 @@ Under every reply, a **Details** panel shows the tools and agents that ran, toke
 
 ## Architecture
 
-```
-                         ┌──────────────────────────────┐
-  Passenger  ⇄  chat  ⇄  │  Supervisor (LLM)            │  the only agent that talks to the passenger
-                         │  9-step procedure + guards   │
-                         └──────────────┬───────────────┘
-                                        │ tool calls
-     ┌──────────────┬─────────────┬─────┴─────────┬──────────────────────────┬────────────┐
- get_booking  get_disruption  rebooking_agent  record_rebooking  compute_care_entitlements  close_case
-                                (LLM)                                compensation_agent (LLM)
-                                  │                                        │
-                            search_flights                       search_regulations (RAG)
-                                                                  calculate_compensation (code)
+The overview above shows who calls what. This is what happens inside one passenger message:
 
-                         Case file: one record per booking, written only by code
-```
+![One turn](docs/one-turn.png)
 
 **Agents as tools.** The supervisor calls the two specialists the same way it calls a tool. Each specialist runs in its own clean context with its own prompt and tools, and returns structured data, not prose. Long legal passages and flight search results never enter the supervisor's conversation.
 
@@ -168,7 +155,7 @@ Flight dates are relative to today, so the demo always has upcoming flights.
 
 - **Backend:** Python, FastAPI, litellm (one interface to every model provider, with fallbacks), Pydantic (validated tool and agent outputs)
 - **Models:** `openai/gpt-oss-120b` and `openai/gpt-oss-20b` on Groq
-- **Retrieval:** semantic search over a small EU261 knowledge base (the regulation and key Court of Justice rulings)
+- **Retrieval:** Chroma with `all-MiniLM-L6-v2` embeddings, over a small EU261 knowledge base (the regulation and key Court of Justice rulings), chunked per section
 - **Observability:** Langfuse
 - **Frontend:** React, TypeScript, Vite
 
