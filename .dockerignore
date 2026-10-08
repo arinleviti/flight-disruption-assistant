@@ -1,0 +1,10 @@
+# Never send secrets or local build output to the build
+**/.env
+**/.venv
+**/__pycache__
+**/node_modules
+frontend/dist
+backend/eval_results
+**/*.db
+.git
+docs

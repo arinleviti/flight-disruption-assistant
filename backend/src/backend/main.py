@@ -8,8 +8,11 @@ load_dotenv()  # must run before importing anything that might read environment 
 
 import os
 from contextlib import asynccontextmanager
+from datetime import date
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from langfuse import propagate_attributes
 
 from backend.agents.supervisor import answer_request
@@ -18,6 +21,16 @@ from backend.models.case_state import CaseState
 from backend.models.chat import Message, ChatRequest, ChatResponse
 from backend.observability import finish_turn, langfuse, start_turn
 from backend.rag.knowledge_base import build_knowledge_base
+
+# Demo limits: a public demo must not be able to run up the model bill.
+# The per-conversation limit can be dodged by starting a new conversation; the daily one can't.
+MAX_MESSAGES_PER_CONVERSATION = 30
+MAX_MESSAGES_PER_DAY = 500
+LIMIT_REPLY = "This demo has reached its message limit. Please start a new conversation, or try again tomorrow."
+
+# In the container (see the Dockerfile) the built React app is copied to /app/static.
+# Locally this folder doesn't exist, so nothing is served from here and Vite serves the frontend as before.
+STATIC_DIR = Path(__file__).resolve().parents[2] / "static"
 
 
 @asynccontextmanager
@@ -36,14 +49,40 @@ conversations: dict[str, list[Message]] = {}
 # session_id -> that conversation's cases, one per booking reference
 case_files: dict[str, dict[str, CaseState]] = {}
 
+# session_id -> how many messages that conversation has sent
+messages_per_session: dict[str, int] = {}
+# messages sent today, by everyone: reset when the date changes
+daily_count = {"date": "", "count": 0}
+
+
+def over_demo_limit(session_id: str) -> bool:
+    """Count this message, and say whether it goes over one of the demo limits."""
+    today = date.today().isoformat()
+    if daily_count["date"] != today:
+        daily_count["date"] = today
+        daily_count["count"] = 0
+    daily_count["count"] += 1
+    messages_per_session[session_id] = messages_per_session.get(session_id, 0) + 1
+
+    return (
+        daily_count["count"] > MAX_MESSAGES_PER_DAY
+        or messages_per_session[session_id] > MAX_MESSAGES_PER_CONVERSATION
+    )
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-
+# Two paths for the same function: locally Vite forwards /api/... to the backend;
+# in production there's no Vite, so the frontend calls /api/chat directly.
+@app.post("/api/chat")
 @app.post("/chat")
 def chat(request: ChatRequest) -> ChatResponse:
+
+    # Stop here, before any model is called, if the demo limits are reached
+    if over_demo_limit(request.session_id):
+        return ChatResponse(reply=LIMIT_REPLY, session_id=request.session_id)
 
     history = conversations.get(request.session_id, [])
     # First message of a session: start with no cases; get_booking adds them
@@ -85,3 +124,9 @@ def chat(request: ChatRequest) -> ChatResponse:
     conversations[request.session_id] = history
     #here stats in sent to the frontend.
     return ChatResponse(reply=answer_str, session_id=request.session_id, stats=stats, trace_url=trace_url)
+
+
+# The website itself. This must come AFTER the routes above: "/" matches every path,
+# so anything mounted before them would hide /api/chat and /health.
+if STATIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="frontend")
