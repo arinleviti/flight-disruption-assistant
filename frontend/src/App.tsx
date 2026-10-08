@@ -27,6 +27,9 @@ const BOOKING_KINDS: { kind: BookingKind; label: string }[] = [
   { kind: 'none', label: 'No disruption' },
 ]
 
+// Where the README lives: architecture, guards, evals and security tests
+const README_URL = 'https://github.com/arinleviti/flight-disruption-assistant#readme'
+
 // The sub-agents: they are called like tools, but they are AI agents (LLMs) themselves
 const AGENT_TOOLS = new Set(['rebooking_agent', 'compensation_agent'])
 
@@ -228,9 +231,14 @@ export default function App() {
             </p>
           </div>
         </div>
-        <button className="button-secondary" onClick={startNewConversation} disabled={loading}>
-          New conversation
-        </button>
+        <div className="header-actions">
+          <a className="header-link" href={README_URL} target="_blank" rel="noreferrer">
+            How it's built
+          </a>
+          <button className="button-secondary" onClick={startNewConversation} disabled={loading}>
+            New conversation
+          </button>
+        </div>
       </header>
 
       <div className="layout">

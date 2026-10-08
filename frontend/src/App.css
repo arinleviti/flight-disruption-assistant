@@ -313,6 +313,29 @@ button:disabled {
   white-space: nowrap;
 }
 
+/* Header: link to the README, next to "New conversation" */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.header-link {
+  padding: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.header-link:hover {
+  border-color: var(--route);
+  color: var(--route);
+}
+
 .link-button {
   padding: 0;
   background: none;
