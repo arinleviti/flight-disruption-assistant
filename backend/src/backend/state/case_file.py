@@ -166,13 +166,8 @@ def summarise_case(case: CaseState) -> list[str]:
     """The note lines for one case."""
     lines = []
 
-    if case.status == "closed":
-        lines.append(
-            "Status: CLOSED. This booking is settled. Answer questions about it from the facts "
-            "below; don't search, book or reassess anything for it."
-        )
-    else:
-        lines.append(f"Status: {case.status}")
+    # Facts only: the rules for using them live in the prompt (supervisor_system.md)
+    lines.append(f"Status: {case.status}")
 
     booking = case.original_booking
     if booking and case.passenger:
@@ -204,11 +199,7 @@ def summarise_case(case: CaseState) -> list[str]:
         lines.append("Disruption: not checked yet")
 
     if case.rebooking.options_offered:
-        lines.append(
-            "Flight options found so far (latest search first). They are NOT every flight: only what "
-            "the searches returned. For any new availability question (another day or time, more options), "
-            "call rebooking_agent again:"
-        )
+        lines.append("Flight options found so far (latest search first):")
         for option in case.rebooking.options_offered:
             route = "direct" if option.via is None else f"via {option.via}"
             departs = to_local_time(option.departure, option.origin)
@@ -225,16 +216,13 @@ def summarise_case(case: CaseState) -> list[str]:
         departs = to_local_time(confirmed.departure, confirmed.origin)
         lines.append(
             f"Confirmed new flight: {confirmed.flight_no} (flight_id {confirmed.flight_id}), "
-            f"departs {departs} local time. Already booked: do not book it again."
+            f"departs {departs} local time (already booked)"
         )
     else:
         lines.append("Confirmed new flight: none yet")
 
     if case.care.entitlements:
-        lines.append(
-            f"Care: already worked out, owed {describe_care(case)}. Vouchers and hotel are collected "
-            "at the Aurora Airways desk. Do not call compute_care_entitlements again for this booking."
-        )
+        lines.append(f"Care: already worked out, owed {describe_care(case)}")
     else:
         lines.append("Care: not worked out yet")
 
@@ -247,7 +235,7 @@ def summarise_case(case: CaseState) -> list[str]:
         lines.append(
             f"Compensation: already assessed, {outcome} "
             f"(extraordinary circumstances: {'yes' if compensation.is_extraordinary else 'no'}). "
-            f"Reason: {compensation.reasoning} Do not call compensation_agent again for this booking."
+            f"Reason: {compensation.reasoning}"
         )
     else:
         lines.append("Compensation: not assessed yet")
@@ -258,10 +246,7 @@ def summarise_case(case: CaseState) -> list[str]:
 def case_file_summary(cases: dict[str, CaseState]) -> str:
     """Turn all the cases into the short note the model reads at the start of every turn."""
     lines = [
-        "CASE FILE: facts already recorded in this conversation, one case per booking reference. "
-        "Use them instead of calling the same tools again (except rebooking_agent: see the flight options note). compensation_agent, "
-        "compute_care_entitlements, close_case and record_rebooking need the booking reference "
-        "of the case they act on."
+        "CASE FILE: facts already recorded in this conversation, one case per booking reference."
     ]
 
     if not cases:
