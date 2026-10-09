@@ -205,8 +205,9 @@ def summarise_case(case: CaseState) -> list[str]:
 
     if case.rebooking.options_offered:
         lines.append(
-            "Flight options found (ranked best first). Show the passenger at most 3 at a time; "
-            "if they ask for more, show the next ones from this list before searching again:"
+            "Flight options found so far (latest search first). They are NOT every flight: only what "
+            "the searches returned. For any new availability question (another day or time, more options), "
+            "call rebooking_agent again:"
         )
         for option in case.rebooking.options_offered:
             route = "direct" if option.via is None else f"via {option.via}"
@@ -258,7 +259,7 @@ def case_file_summary(cases: dict[str, CaseState]) -> str:
     """Turn all the cases into the short note the model reads at the start of every turn."""
     lines = [
         "CASE FILE: facts already recorded in this conversation, one case per booking reference. "
-        "Use them instead of calling the same tools again. compensation_agent, "
+        "Use them instead of calling the same tools again (except rebooking_agent: see the flight options note). compensation_agent, "
         "compute_care_entitlements, close_case and record_rebooking need the booking reference "
         "of the case they act on."
     ]
