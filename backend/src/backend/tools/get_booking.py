@@ -1,5 +1,5 @@
 from backend.models.case_state import OriginalBooking, Passenger
-from backend.tools.time_utils import local_day_time_to_utc
+from backend.tools.time_utils import local_day_time_to_utc, to_local_time
 import json
 import hashlib
 from pathlib import Path
@@ -18,6 +18,17 @@ def convert_offset_to_time(minutes_offset: int) -> datetime:
     timenow = datetime.now(timezone.utc)
     scheduled_time = timenow + timedelta(minutes=minutes_offset)
     return scheduled_time
+
+def booking_with_local_times(booking: OriginalBooking) -> dict:
+    """The booking as plain data, with its times on the clocks at each airport.
+
+    The stored times are UTC. The model must never present a UTC time as local,
+    so the local ones are added here, in code.
+    """
+    data = booking.model_dump(mode="json")
+    data["scheduled_departure_local"] = to_local_time(booking.scheduled_departure, booking.origin)
+    data["scheduled_arrival_local"] = to_local_time(booking.scheduled_arrival, booking.destination)
+    return data
 
 def get_booking(booking_ref: str) -> dict:
     ref = booking_ref.strip().upper()
@@ -56,7 +67,7 @@ def get_booking(booking_ref: str) -> dict:
 
     return {
         "passenger": passenger.model_dump(mode="json"),
-        "booking": booking.model_dump(mode="json"),
+        "booking": booking_with_local_times(booking),
     }
 
 

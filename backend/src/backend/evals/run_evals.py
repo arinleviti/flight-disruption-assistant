@@ -11,8 +11,9 @@ Run it from the backend folder (the server doesn't need to be running):
 Every turn is also traced in Langfuse, tagged "eval", with one session per scenario.
 A full report (checks, stats, the whole conversation) is saved to eval_results/<date-time>.json.
 """
-#uv run python -m backend.evals.run_evals                  # all 9 passengers
+#uv run python -m backend.evals.run_evals                  # every scenario
 #uv run python -m backend.evals.run_evals --only TMQ4L9     # just one (or several) --only TMQ4L9 KMW3P8, etc.
+#uv run python -m backend.evals.run_evals --only GBX7T2-MILAN   # one scenario of a booking that has several
 from dotenv import load_dotenv
 
 load_dotenv()  # before importing anything that reads environment variables (API keys, Langfuse keys)
@@ -37,6 +38,10 @@ from backend.tools.time_utils import to_local_time
 PAUSE_BETWEEN_TURNS = 2   # seconds: gives the free-tier rate limits a little room
 RESULTS_DIR = Path("eval_results")
 
+# Guards that only fire when something went wrong (a refused call, an agent that never answered).
+# Protective guards that fire on purpose, like booking_not_confirmed, are not in this list.
+FAILURE_GUARDS = {"missing_arguments", "max_rounds"}
+
 
 # ---------------------------------------------------------------- running one scenario
 
@@ -45,7 +50,7 @@ def run_scenario(scenario: Scenario, run_id: str) -> dict:
     history: list[Message] = []
     cases: dict[str, CaseState] = {}     # a fresh, empty case file, like a new browser session
     turns: list[dict] = []
-    session_id = f"eval-{run_id}-{scenario.ref}"
+    session_id = f"eval-{run_id}-{scenario.id}"
 
     # A clean flight inventory for every scenario: earlier scenarios' bookings are wiped
     build_inventory_db()
@@ -56,7 +61,7 @@ def run_scenario(scenario: Scenario, run_id: str) -> dict:
         with langfuse.start_as_current_observation(
             name="eval_turn",
             as_type="agent",
-            input={"message": message, "scenario": scenario.ref},
+            input={"message": message, "scenario": scenario.id},
         ) as turn:
             with propagate_attributes(session_id=session_id, trace_name="eval_turn", tags=["eval"]):
                 reply = answer_request(message, history, cases)
@@ -133,6 +138,30 @@ def run_checks(scenario: Scenario, turns: list[dict], cases: dict[str, CaseState
         booked_date = to_local_time(confirmed.departure, confirmed.origin)[:10]
         results.append(check("not before the original date", booked_date >= original_date,
                              f"original {original_date}, booked {booked_date}"))
+    if scenario.booked_flight_nos and confirmed:
+        results.append(check("booked the expected flight", confirmed.flight_no in scenario.booked_flight_nos,
+                             f"expected one of {sorted(scenario.booked_flight_nos)}, got {confirmed.flight_no}"))
+    if scenario.departs_from and confirmed:
+        results.append(check("departs from the expected airport", confirmed.origin == scenario.departs_from,
+                             f"expected {scenario.departs_from}, got {confirmed.origin}"))
+    if scenario.connection and confirmed:
+        results.append(check("booked flight is a connection", bool(confirmed.via),
+                             f"via {confirmed.via}" if confirmed.via else "direct"))
+    if scenario.not_via and confirmed:
+        results.append(check(f"not via {scenario.not_via}", confirmed.via != scenario.not_via,
+                             f"via {confirmed.via}" if confirmed.via else "direct"))
+    if scenario.earliest_arrival and confirmed:
+        # The passenger accepts the recommendation, so the recommendation must be the one that arrives first,
+        # among the options the passenger can accept (the agent may also list ones they ruled out, lower down)
+        acceptable = [
+            option for option in case.rebooking.options_offered
+            if not (scenario.direct_only and option.via)
+            and not (scenario.not_via and option.via == scenario.not_via)
+        ]
+        if acceptable:
+            first_arrival = min(option.arrival for option in acceptable)
+            results.append(check("booked the earliest arrival offered", confirmed.arrival == first_arrival,
+                                 f"booked arrives {confirmed.arrival}, earliest acceptable {first_arrival}"))
 
     # 5. Care
     if scenario.care_expected:
@@ -160,6 +189,16 @@ def run_checks(scenario: Scenario, turns: list[dict], cases: dict[str, CaseState
     known = known_flight_numbers(cases)
     invented = sorted({n for turn in turns for n in FLIGHT_NUMBER.findall(turn["assistant"])} - known)
     results.append(check("no invented flights in replies", not invented, ", ".join(invented)))
+
+    # 9. Texts some reply must contain, e.g. a time that must be shown in local time
+    replies = " ".join(turn["assistant"] for turn in turns)
+    for text in scenario.reply_mentions:
+        results.append(check(f"a reply mentions {text}", text in replies))
+
+    # 10. No guard that means something went wrong
+    fired = [guard["name"] for turn in turns for guard in (turn["stats"] or {}).get("guards", [])]
+    failures = sorted({name for name in fired if name in FAILURE_GUARDS})
+    results.append(check("no failure guards", not failures, ", ".join(failures)))
 
     return results
 
@@ -189,14 +228,15 @@ def main():
     #creates a "parser" object that will read them. description is the text shown if you run the script with --help
     parser = argparse.ArgumentParser(description="Run the eval scenarios.")
     #nargs="*" means "any number of values after it", so --only TMQ4L9 KMW3P8 gives a list: ["TMQ4L9", "KMW3P8"]
-    parser.add_argument("--only", nargs="*", help="booking references to run (default: all)")
+    parser.add_argument("--only", nargs="*", help="scenario ids or booking references to run (default: all)")
     #reads what i typed in the terminal and turns it into a dictionary of options, like {"only": ["TMQ4L9", "KMW3P8"]}
     args = parser.parse_args()
 
     # Which passengers to run: the ones typed after --only, or all of them
     if args.only:
-        wanted = [ref.upper() for ref in args.only]
-        scenarios = [scenario for scenario in SCENARIOS if scenario.ref in wanted]
+        # A booking reference runs every scenario of that booking; an id runs just that one
+        wanted = [name.upper() for name in args.only]
+        scenarios = [scenario for scenario in SCENARIOS if scenario.ref in wanted or scenario.id in wanted]
     else:
         scenarios = SCENARIOS
     run_id = datetime.now().strftime("%Y%m%d-%H%M")
@@ -204,10 +244,11 @@ def main():
 
     report = []
     for scenario in scenarios:
-        print(f"\n=== {scenario.ref} · {scenario.title} ===")
+        print(f"\n=== {scenario.id} · {scenario.title} ===")
         played = run_scenario(scenario, run_id)
         results = run_checks(scenario, played["turns"], played["cases"])
         report.append({
+            "id": scenario.id,
             "ref": scenario.ref,
             "title": scenario.title,
             "checks": results,
@@ -228,7 +269,7 @@ def main():
         all_passed += passed
         t = entry["totals"]
         mark = "PASS" if passed == total else "FAIL"
-        print(f"\n{mark}  {entry['ref']} · {entry['title']}  ({passed}/{total} checks, "
+        print(f"\n{mark}  {entry['id']} · {entry['title']}  ({passed}/{total} checks, "
               f"{t['seconds']} s, {t['llm_calls']} LLM calls, {t['tokens']:,} tokens, ${t['cost_usd']})")
         for c in entry["checks"]:
             if not c["passed"]:

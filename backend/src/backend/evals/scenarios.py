@@ -28,6 +28,19 @@ class Scenario:
     closed: bool = True                     # close_case must have closed the case
     direct_only: bool = False               # the booked flight must be direct (no "via")
     not_before_original_date: bool = False  # the booked flight can't leave before the original date
+    booked_flight_nos: set[str] = field(default_factory=set)  # the booked flight must be one of these (empty: don't check)
+    departs_from: str | None = None         # the booked flight must leave from this airport
+    connection: bool = False                # the booked flight must be a connection (has a "via")
+    not_via: str | None = None              # the booked flight must not connect at this airport
+    earliest_arrival: bool = False          # the booked flight arrives first among the options offered
+    reply_mentions: list[str] = field(default_factory=list)  # texts some reply must contain, e.g. a local time
+
+    # Several scenarios can share one booking: id tells them apart (default: the booking reference)
+    id: str = ""
+
+    def __post_init__(self):
+        if not self.id:
+            self.id = self.ref
 
 
 # The usual messages for a cancellation: preferences in one go, accept, confirm, compensation, goodbye
@@ -63,6 +76,7 @@ SCENARIOS = [
         is_extraordinary=False,            # technical problems are not extraordinary (Wallentin-Hermann)
         eligible=True,
         amounts_eur={250, 125},            # 1,105 km: €250, or €125 if the new flight arrives within 2 h
+        earliest_arrival=True,             # "earliest" means arriving first, not leaving first
     ),
     Scenario(
         ref="BRT9Q7",
@@ -85,6 +99,7 @@ SCENARIOS = [
         eligible=True,
         amounts_eur={600, 300},            # 6,880 km: €600, or €300 if the new flight arrives within 4 h
         direct_only=True,
+        earliest_arrival=True,
     ),
     Scenario(
         ref="GBX7T2",
@@ -98,6 +113,42 @@ SCENARIOS = [
         is_extraordinary=False,            # a commercial decision is the airline's own choice
         # The amount depends on which re-route is chosen (7–13 days' notice), so it isn't checked
         not_before_original_date=True,
+        reply_mentions=["09:00"],          # the original departure, in Rome time (07:00 is the UTC time)
+    ),
+    Scenario(
+        ref="GBX7T2",
+        id="GBX7T2-MILAN",
+        title="Giulia · leaves from Milan instead of Rome",
+        messages=cancellation_script(
+            "GBX7T2",
+            "Can I leave the day after my original flight, from Milan instead of Rome? "
+            "Direct only please. I'm on crutches.",
+        ),
+        rebooked=True,
+        is_extraordinary=False,
+        eligible=True,
+        amounts_eur={250},                 # arrives more than a day late, 7–13 days' notice: owed
+        direct_only=True,
+        booked_flight_nos={"AU435"},       # the only flight from Milan: a leg of the Rome–Milan–Paris connection
+        departs_from="MXP",
+    ),
+    Scenario(
+        ref="GBX7T2",
+        id="GBX7T2-CONNECTION",
+        title="Giulia · books the connection via Milan",
+        messages=cancellation_script(
+            "GBX7T2",
+            "Can I leave the day after my original flight, with a connection via Milan? "
+            "I don't need any assistance.",
+        ),
+        rebooked=True,
+        is_extraordinary=False,
+        eligible=True,
+        amounts_eur={250},
+        booked_flight_nos={"AU406/AU435"}, # built by search_flights from two single flights
+        departs_from="FCO",
+        connection=True,
+        reply_mentions=["10:30", "13:15"], # landing in Milan and leaving again: the connection times
     ),
     Scenario(
         ref="TMQ4L9",
@@ -125,6 +176,25 @@ SCENARIOS = [
         eligible=False,
         amounts_eur={0},
         not_before_original_date=True,
+        earliest_arrival=True,
+        reply_mentions=["13:05"],          # the original departure, in Paris time (11:05 is the UTC time)
+    ),
+    Scenario(
+        ref="ACR5N8",
+        id="ACR5N8-NOT-MAD",
+        title="Ana · same day, connections fine but not via Madrid",
+        messages=cancellation_script(
+            "ACR5N8",
+            "The same day as my original flight please. Connections are fine, but not via Madrid. "
+            "I don't need any assistance.",
+        ),
+        rebooked=True,
+        is_extraordinary=True,
+        eligible=False,
+        amounts_eur={0},
+        not_before_original_date=True,
+        not_via="MAD",
+        booked_flight_nos={"AU250"},       # the only same-day flight left without the Madrid connection
     ),
     Scenario(
         ref="ECW2H6",
@@ -146,6 +216,7 @@ SCENARIOS = [
         is_extraordinary=True,             # bird strike (Pešková)
         eligible=False,
         amounts_eur={0},
+        earliest_arrival=True,
     ),
     Scenario(
         ref="LFD8V4",

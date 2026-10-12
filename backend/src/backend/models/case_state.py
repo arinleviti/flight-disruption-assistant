@@ -38,7 +38,9 @@ class FlightOption(BaseModel):
     flight_no: str
     origin: str
     destination: str
-    via: str | None = None   # connection airport, if any
+    via: str | None = None
+    via_arrival: datetime | None = None    # landing at the connection airport
+    via_departure: datetime | None = None  # taking off again from it
     departure: datetime
     arrival: datetime
 

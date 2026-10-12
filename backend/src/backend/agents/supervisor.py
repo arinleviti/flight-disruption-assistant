@@ -3,7 +3,7 @@ from backend.models.case_state import CaseState
 from pathlib import Path
 import re
 import litellm
-from backend.tools.get_booking import GET_BOOKING_TOOL, get_booking
+from backend.tools.get_booking import GET_BOOKING_TOOL, booking_with_local_times, get_booking
 from backend.tools.get_disruption import GET_DISRUPTION_TOOL, get_disruption
 from backend.agents.rebooking_agent import REBOOKING_AGENT_TOOL, get_flights_options
 from backend.agents.compensation_agent import COMPENSATION_AGENT_TOOL, compensation_agent
@@ -63,6 +63,9 @@ CASE_TOOLS = {"compute_care_entitlements", "compensation_agent", "close_case"}
 
 # An Aurora Airways flight number in a reply: "AU" followed by 3 or 4 digits, e.g. AU644
 FLIGHT_NUMBER = re.compile(r"\bAU\d{3,4}\b")
+
+# The exact question that ends a list of options (Step 4 of the supervisor prompt)
+OPTIONS_QUESTION = "Which one would you like?"
 
 
 def parse_arguments(arguments_json: str) -> dict | None:
@@ -135,6 +138,19 @@ def confirmation_problem(arguments: dict | None, cases: dict[str, CaseState], hi
         return None  # run_tool refuses flights that were never offered
 
     previous = last_assistant_message(history)
+
+    # A list of options ends with Step 4's exact question. Even with a single option it's a choice,
+    # not a confirmation: the passenger still has to answer the restated flight with a yes.
+    if OPTIONS_QUESTION in previous:
+        record_guard("supervisor", "booking_not_confirmed", f"{chosen.flight_no} was chosen from a list, not confirmed")
+        return {
+            "error": (
+                f"The passenger chose {chosen.flight_no} from the list but has not confirmed it yet. Do not book it now. "
+                f"First restate this exact flight (flight number {chosen.flight_no}, date, local departure and arrival "
+                "times, direct or via) and ask the passenger to confirm. Book only after they say yes."
+            )
+        }
+
     #for number in ... goes through each leg: first "AU404", then "AU433".
     #number in previous: is this text inside the previous message? With strings, in means "contains", like .includes() in JS:
     #all(...) gives True only if every check is True. If even one leg is missing from the message, it gives False.
@@ -227,7 +243,7 @@ def run_tool(name: str, arguments: dict | None, cases: dict[str, CaseState]) -> 
             record_guard("supervisor", "booking_from_case_file", f"get_booking({ref}) answered from the case file")
             return {
                 "passenger": case.passenger.model_dump(mode="json"),
-                "booking": case.original_booking.model_dump(mode="json"),
+                "booking": booking_with_local_times(case.original_booking),
                 "note": "Already in the case file; no need to call get_booking again.",
             }
 
@@ -291,7 +307,8 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
                 num_retries=NUM_RETRIES,
             )
             #Groq catches it: an exception, handled by the first except.
-        except litellm.BadRequestError as e:
+        # With fallbacks, litellm can deliver Groq's refusal wrapped as an APIConnectionError
+        except (litellm.BadRequestError, litellm.APIConnectionError) as e:
             # Groq rejects calls to tools that weren't sent in TOOL_SCHEMAS.
             # Tell the model and let it try again, instead of crashing.
             if "tool_use_failed" in str(e):

@@ -70,11 +70,13 @@ def assess_extraordinary(case: CaseState) -> ExtraordinaryAssessment | dict:
         {"role": "user", "content": json.dumps(request, ensure_ascii=False)},
     ]
 
-    for round_number in range(MAX_TOOL_ROUNDS):
+    # One round more than MAX_TOOL_ROUNDS: if the final answer fails (a refused tool call,
+    # a badly formatted reply), the model gets one more try at it, still without the tool.
+    for round_number in range(MAX_TOOL_ROUNDS + 1):
         # Last round: no more searching. The tool is taken away, so the model has to answer
         # with the passages it already has, instead of searching until it runs out of rounds.
-        last_round = round_number == MAX_TOOL_ROUNDS - 1
-        if last_round:
+        last_round = round_number >= MAX_TOOL_ROUNDS - 1
+        if round_number == MAX_TOOL_ROUNDS - 1:
             messages.append({
                 "role": "user",
                 "content": (
@@ -93,7 +95,8 @@ def assess_extraordinary(case: CaseState) -> ExtraordinaryAssessment | dict:
                 fallbacks=FALLBACK_MODELS,
                 num_retries=NUM_RETRIES,
             )
-        except litellm.BadRequestError as e:
+        # With fallbacks, litellm can deliver Groq's refusal wrapped as an APIConnectionError
+        except (litellm.BadRequestError, litellm.APIConnectionError) as e:
             if "tool_use_failed" in str(e):
                 record_guard("compensation", "tool_not_available", str(e)[:300])
                 messages.append({

@@ -2,10 +2,8 @@
   { "flight_id": "F-001", "flight_no": "AU612",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_offset_minutes": 180,  "duration_minutes": 135, "seats_available": 0 },
   { "flight_id": "F-005", "flight_no": "AU608",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_offset_minutes": -240, "duration_minutes": 135, "seats_available": 12 },
   { "flight_id": "F-002", "flight_no": "AU614",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_offset_minutes": 330,  "duration_minutes": 135, "seats_available": 4 },
-  { "flight_id": "F-004", "flight_no": "AU402/AU431", "origin": "FCO", "destination": "CDG", "via": "MXP", "departure_offset_minutes": 150,  "duration_minutes": 360, "seats_available": 9 },
   { "flight_id": "F-014", "flight_no": "AU618",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 0,  "departure_time": "21:45", "duration_minutes": 135, "seats_available": 12 },
   { "flight_id": "F-003", "flight_no": "AU616",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 1,  "departure_time": "07:15", "duration_minutes": 135, "seats_available": 38 },
-  { "flight_id": "F-017", "flight_no": "AU404/AU433", "origin": "FCO", "destination": "CDG", "via": "MXP", "departure_day": 1,  "departure_time": "08:30", "duration_minutes": 330, "seats_available": 14 },
   { "flight_id": "F-015", "flight_no": "AU620",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 1,  "departure_time": "10:40", "duration_minutes": 135, "seats_available": 25 },
   { "flight_id": "F-016", "flight_no": "AU622",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 1,  "departure_time": "14:05", "duration_minutes": 135, "seats_available": 3 },
   { "flight_id": "F-018", "flight_no": "AU624",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 1,  "departure_time": "18:50", "duration_minutes": 135, "seats_available": 30 },
@@ -15,7 +13,6 @@
   { "flight_id": "F-026", "flight_no": "AU634",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 10, "departure_time": "12:15", "duration_minutes": 135, "seats_available": 16 },
   { "flight_id": "F-027", "flight_no": "AU636",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 10, "departure_time": "18:40", "duration_minutes": 135, "seats_available": 28 },
   { "flight_id": "F-033", "flight_no": "AU638",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 11, "departure_time": "07:30", "duration_minutes": 135, "seats_available": 24 },
-  { "flight_id": "F-035", "flight_no": "AU406/AU435", "origin": "FCO", "destination": "CDG", "via": "MXP", "departure_day": 11, "departure_time": "09:20", "duration_minutes": 330, "seats_available": 10 },
   { "flight_id": "F-034", "flight_no": "AU650",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 11, "departure_time": "13:10", "duration_minutes": 135, "seats_available": 18 },
   { "flight_id": "F-028", "flight_no": "AU642",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 20, "departure_time": "08:00", "duration_minutes": 135, "seats_available": 35 },
   { "flight_id": "F-029", "flight_no": "AU644",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 20, "departure_time": "13:30", "duration_minutes": 135, "seats_available": 22 },
@@ -23,21 +20,36 @@
   { "flight_id": "F-037", "flight_no": "AU648",       "origin": "FCO", "destination": "CDG", "via": null,  "departure_day": 21, "departure_time": "14:20", "duration_minutes": 135, "seats_available": 26 },
 
   { "flight_id": "F-006", "flight_no": "AU226",       "origin": "CDG", "destination": "LIS", "via": null,  "departure_offset_minutes": 240,  "duration_minutes": 165, "seats_available": 7 },
-  { "flight_id": "F-007", "flight_no": "AU240/AU517", "origin": "CDG", "destination": "LIS", "via": "MAD", "departure_offset_minutes": 90,   "duration_minutes": 300, "seats_available": 15 },
   { "flight_id": "F-008", "flight_no": "AU228",       "origin": "CDG", "destination": "LIS", "via": null,  "departure_day": 1,  "departure_time": "07:20", "duration_minutes": 165, "seats_available": 40 },
-  { "flight_id": "F-022", "flight_no": "AU242/AU519", "origin": "CDG", "destination": "LIS", "via": "MAD", "departure_day": 1,  "departure_time": "09:00", "duration_minutes": 310, "seats_available": 20 },
   { "flight_id": "F-020", "flight_no": "AU230",       "origin": "CDG", "destination": "LIS", "via": null,  "departure_day": 1,  "departure_time": "12:15", "duration_minutes": 165, "seats_available": 18 },
   { "flight_id": "F-021", "flight_no": "AU232",       "origin": "CDG", "destination": "LIS", "via": null,  "departure_day": 1,  "departure_time": "17:40", "duration_minutes": 165, "seats_available": 2 },
   { "flight_id": "F-030", "flight_no": "AU250",       "origin": "CDG", "destination": "LIS", "via": null,  "departure_day": 5,  "departure_time": "08:10", "duration_minutes": 165, "seats_available": 12 },
-  { "flight_id": "F-031", "flight_no": "AU254/AU521", "origin": "CDG", "destination": "LIS", "via": "MAD", "departure_day": 5,  "departure_time": "10:00", "duration_minutes": 310, "seats_available": 9 },
   { "flight_id": "F-032", "flight_no": "AU252",       "origin": "CDG", "destination": "LIS", "via": null,  "departure_day": 6,  "departure_time": "15:45", "duration_minutes": 165, "seats_available": 30 },
 
-  { "flight_id": "F-011", "flight_no": "AU452/AU171", "origin": "FCO", "destination": "JFK", "via": "FRA", "departure_offset_minutes": 180,  "duration_minutes": 750, "seats_available": 1 },
-  { "flight_id": "F-010", "flight_no": "AU410/AU161", "origin": "FCO", "destination": "JFK", "via": "LHR", "departure_offset_minutes": 240,  "duration_minutes": 780, "seats_available": 6 },
-  { "flight_id": "F-024", "flight_no": "AU414/AU165", "origin": "FCO", "destination": "JFK", "via": "LHR", "departure_day": 1,  "departure_time": "07:00", "duration_minutes": 760, "seats_available": 12 },
   { "flight_id": "F-009", "flight_no": "AU903",       "origin": "FCO", "destination": "JFK", "via": null,  "departure_day": 1,  "departure_time": "10:15", "duration_minutes": 590, "seats_available": 22 },
   { "flight_id": "F-023", "flight_no": "AU907",       "origin": "FCO", "destination": "JFK", "via": null,  "departure_day": 1,  "departure_time": "16:30", "duration_minutes": 590, "seats_available": 9 },
   { "flight_id": "F-012", "flight_no": "AU905",       "origin": "FCO", "destination": "JFK", "via": null,  "departure_day": 2,  "departure_time": "10:15", "duration_minutes": 590, "seats_available": 30 },
 
-  { "flight_id": "F-013", "flight_no": "AU330",       "origin": "FCO", "destination": "LIS", "via": null,  "departure_offset_minutes": 200,  "duration_minutes": 170, "seats_available": 20 }
+  { "flight_id": "F-013", "flight_no": "AU330",       "origin": "FCO", "destination": "LIS", "via": null,  "departure_offset_minutes": 200,  "duration_minutes": 170, "seats_available": 20 },
+
+  { "flight_id": "F-038", "flight_no": "AU402",       "origin": "FCO", "destination": "MXP", "via": null,  "departure_offset_minutes": 150,  "duration_minutes": 70,  "seats_available": 9 },
+  { "flight_id": "F-039", "flight_no": "AU431",       "origin": "MXP", "destination": "CDG", "via": null,  "departure_offset_minutes": 415,  "duration_minutes": 95,  "seats_available": 9 },
+  { "flight_id": "F-040", "flight_no": "AU404",       "origin": "FCO", "destination": "MXP", "via": null,  "departure_day": 1,  "departure_time": "08:30", "duration_minutes": 70,  "seats_available": 14 },
+  { "flight_id": "F-041", "flight_no": "AU433",       "origin": "MXP", "destination": "CDG", "via": null,  "departure_day": 1,  "departure_time": "12:25", "duration_minutes": 95,  "seats_available": 14 },
+  { "flight_id": "F-042", "flight_no": "AU406",       "origin": "FCO", "destination": "MXP", "via": null,  "departure_day": 11, "departure_time": "09:20", "duration_minutes": 70,  "seats_available": 10 },
+  { "flight_id": "F-043", "flight_no": "AU435",       "origin": "MXP", "destination": "CDG", "via": null,  "departure_day": 11, "departure_time": "13:15", "duration_minutes": 95,  "seats_available": 10 },
+
+  { "flight_id": "F-044", "flight_no": "AU240",       "origin": "CDG", "destination": "MAD", "via": null,  "departure_offset_minutes": 90,   "duration_minutes": 120, "seats_available": 15 },
+  { "flight_id": "F-045", "flight_no": "AU517",       "origin": "MAD", "destination": "LIS", "via": null,  "departure_offset_minutes": 310,  "duration_minutes": 80,  "seats_available": 15 },
+  { "flight_id": "F-046", "flight_no": "AU242",       "origin": "CDG", "destination": "MAD", "via": null,  "departure_day": 1,  "departure_time": "09:00", "duration_minutes": 120, "seats_available": 20 },
+  { "flight_id": "F-047", "flight_no": "AU519",       "origin": "MAD", "destination": "LIS", "via": null,  "departure_day": 1,  "departure_time": "12:50", "duration_minutes": 80,  "seats_available": 20 },
+  { "flight_id": "F-048", "flight_no": "AU254",       "origin": "CDG", "destination": "MAD", "via": null,  "departure_day": 5,  "departure_time": "10:00", "duration_minutes": 120, "seats_available": 9 },
+  { "flight_id": "F-049", "flight_no": "AU521",       "origin": "MAD", "destination": "LIS", "via": null,  "departure_day": 5,  "departure_time": "13:50", "duration_minutes": 80,  "seats_available": 9 },
+
+  { "flight_id": "F-050", "flight_no": "AU452",       "origin": "FCO", "destination": "FRA", "via": null,  "departure_offset_minutes": 180,  "duration_minutes": 120, "seats_available": 1 },
+  { "flight_id": "F-051", "flight_no": "AU171",       "origin": "FRA", "destination": "JFK", "via": null,  "departure_offset_minutes": 395,  "duration_minutes": 535, "seats_available": 1 },
+  { "flight_id": "F-052", "flight_no": "AU410",       "origin": "FCO", "destination": "LHR", "via": null,  "departure_offset_minutes": 240,  "duration_minutes": 165, "seats_available": 6 },
+  { "flight_id": "F-053", "flight_no": "AU161",       "origin": "LHR", "destination": "JFK", "via": null,  "departure_offset_minutes": 540,  "duration_minutes": 480, "seats_available": 6 },
+  { "flight_id": "F-054", "flight_no": "AU414",       "origin": "FCO", "destination": "LHR", "via": null,  "departure_day": 1,  "departure_time": "07:00", "duration_minutes": 165, "seats_available": 12 },
+  { "flight_id": "F-055", "flight_no": "AU165",       "origin": "LHR", "destination": "JFK", "via": null,  "departure_day": 1,  "departure_time": "10:40", "duration_minutes": 480, "seats_available": 12 }
 ]

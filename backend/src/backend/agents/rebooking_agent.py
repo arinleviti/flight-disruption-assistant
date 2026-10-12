@@ -7,8 +7,8 @@ from backend.observability import call_llm, record_guard, trace_tool
 import json
 from pydantic import ValidationError
 
-MODEL = "groq/openai/gpt-oss-20b"           # Smaller Groq, not free, paid but cheaper.
-FALLBACK_MODELS = ["groq/openai/gpt-oss-120b"]  # paid Groq if Gemini is busy or out of quota
+MODEL = "groq/openai/gpt-oss-120b"           # Smaller Groq, not free, paid but cheaper.
+FALLBACK_MODELS = ["groq/openai/gpt-oss-20b"]  # paid Groq if Gemini is busy or out of quota
 NUM_RETRIES = 0
 MAX_TOOL_ROUNDS = 6  # safety limit: stop if the model keeps calling tools
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "rebooking_system.md"
@@ -105,6 +105,10 @@ def add_local_times(result: RebookingResult) -> dict:
     for option, flight in zip(data["options"], result.options):
         option["departure_local"] = to_local_time(flight.departure, flight.origin)
         option["arrival_local"] = to_local_time(flight.arrival, flight.destination)
+         # A connection: the times at the connection airport, on its own clock
+        if flight.via:
+            option["via_arrival_local"] = to_local_time(flight.via_arrival, flight.via)
+            option["via_departure_local"] = to_local_time(flight.via_departure, flight.via)
 
     return data
 
@@ -168,7 +172,8 @@ def get_flights_options(
                 fallbacks=FALLBACK_MODELS,
                 num_retries=NUM_RETRIES,
             )
-        except litellm.BadRequestError as e:
+        # With fallbacks, litellm can deliver Groq's refusal wrapped as an APIConnectionError
+        except (litellm.BadRequestError, litellm.APIConnectionError) as e:
             if "tool_use_failed" in str(e):
                 record_guard("rebooking", "tool_not_available", str(e)[:300])
                 messages.append({
@@ -246,9 +251,7 @@ REBOOKING_AGENT_TOOL = {
             "Specialist agent that searches the airline's flight inventory for alternatives to a "
             "disrupted flight and returns up to 7 options, ranked best first, with local departure "
             "and arrival times, a recommended flight and a short reason. "
-            "Call it once you have the booking and the disruption. Pass the passenger's preferences "
-            "in their own words if they gave any, and their special needs from the booking. "
-            "Call it again with updated preferences if the passenger rejects the options."
+            "It keeps no memory between calls."
         ),
         "parameters": {
             "type": "object",
@@ -271,7 +274,7 @@ REBOOKING_AGENT_TOOL = {
                 },
                 "special_needs": {
                     "type": "string",
-                    "description": "Special needs from the booking, e.g. wheelchair assistance. Empty if none.",
+                    "description": "The passenger's special needs, e.g. wheelchair assistance, crutches. Empty if none.",
                 },
             },
             "required": ["origin", "destination", "disrupted_flight_no"],
