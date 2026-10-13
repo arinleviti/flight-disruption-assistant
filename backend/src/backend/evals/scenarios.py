@@ -59,6 +59,18 @@ def cancellation_script(ref: str, preferences: str) -> list[str]:
     ]
 
 
+# When only one flight fits, the assistant asks "Shall I book you on…?" straight away (Step 4):
+# there's nothing to choose, so the passenger goes straight to yes
+def one_option_script(ref: str, preferences: str) -> list[str]:
+    return [
+        f"Hi, my flight has been cancelled. My booking reference is {ref}.",
+        preferences,
+        "Yes, please book it.",
+        "Yes, please check my compensation.",
+        "Thank you, that's everything.",
+    ]
+
+
 # The usual messages for a delay the passenger accepts
 def delay_script(ref: str) -> list[str]:
     return [
@@ -117,8 +129,7 @@ SCENARIOS = [
             "Hi, my flight is delayed. My booking reference is BRT9Q7.",
             "I'd like an alternative. Could I fly from Rome instead? The earliest available flight, "
             "direct only, and I don't need any assistance.",
-            "I'll take the option you recommend.",
-            "Yes, please book it.",
+            "Yes, please book it.",        # one option (AU330): the assistant asks "Shall I book you on…?" straight away
             "Yes, please check my compensation.",
             "Thank you, that's everything.",
         ],
@@ -162,7 +173,7 @@ SCENARIOS = [
         ref="GBX7T2",
         id="GBX7T2-MILAN",
         title="Giulia · leaves from Milan instead of Rome",
-        messages=cancellation_script(
+        messages=one_option_script(
             "GBX7T2",
             "Can I leave the day after my original flight, from Milan instead of Rome? "
             "Direct only please. I'm on crutches.",
@@ -267,10 +278,10 @@ SCENARIOS = [
         ref="ACR5N8",
         id="ACR5N8-NOT-MAD",
         title="Ana · same day, connections fine but not via Madrid",
-        messages=cancellation_script(
+        messages=one_option_script(
             "ACR5N8",
-            "The same day as my original flight please. Connections are fine, but not via Madrid. "
-            "I don't need any assistance.",
+            "The earliest flight on the same day as my original one please. Connections are fine, "
+            "but not via Madrid. I don't need any assistance.",
         ),
         rebooked=True,
         is_extraordinary=True,
@@ -301,6 +312,39 @@ SCENARIOS = [
         eligible=False,
         amounts_eur={0},
         earliest_arrival=True,
+    ),
+    Scenario(
+        ref="PGB3K1",
+        id="PGB3K1-ONE-OPTION",
+        title="Paolo · only one flight that day, booked with a single yes",
+        messages=one_option_script(
+            "PGB3K1",
+            "Two days after my original flight please. Layovers are fine and I don't need any assistance.",
+        ),
+        rebooked=True,
+        is_extraordinary=True,
+        eligible=False,
+        amounts_eur={0},
+        booked_flight_nos={"AU626"},       # the only Rome–Paris flight two days after the original
+        booked_day_offset=2,
+    ),
+    Scenario(
+        ref="PGB3K1",
+        id="PGB3K1-OTHER-DESTINATION",
+        title="Paolo · asks to fly to Madrid instead of Paris",
+        messages=[
+            "Hi, my flight has been cancelled. My booking reference is PGB3K1.",
+            "Can I fly to Madrid instead?",
+            "Ok. Then the earliest available flight to Paris please. Connections are fine and I don't need any assistance.",
+            "I'll take the option you recommend.",
+            "Yes, please book it.",
+            "Yes, please check my compensation.",
+            "Thank you, that's everything.",
+        ],
+        rebooked=True,                     # still rebooked, to Paris (checked for every scenario)
+        is_extraordinary=True,
+        eligible=False,
+        amounts_eur={0},
     ),
     Scenario(
         ref="LFD8V4",

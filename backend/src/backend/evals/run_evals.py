@@ -133,6 +133,11 @@ def run_checks(scenario: Scenario, turns: list[dict], cases: dict[str, CaseState
         results.append(check("original flight kept", confirmed is None and "record_rebooking" not in succeeded))
 
     # 4. Rules about the booked flight
+    # Every scenario: a rebooking goes to the booking's destination (a different one is a new trip)
+    if confirmed and case.original_booking:
+        destination = case.original_booking.destination
+        results.append(check("arrives at the booked destination", confirmed.destination == destination,
+                             f"expected {destination}, got {confirmed.destination}"))
     if scenario.direct_only and confirmed:
         results.append(check("booked flight is direct", not confirmed.via, f"via {confirmed.via}" if confirmed.via else "direct"))
     if scenario.not_before_original_date and confirmed and case.original_booking:

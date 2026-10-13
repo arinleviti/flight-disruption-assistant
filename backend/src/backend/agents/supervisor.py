@@ -167,7 +167,14 @@ def confirmation_problem(arguments: dict | None, cases: dict[str, CaseState], hi
         if option.flight_id != flight_id:              # skip the one being booked
             for number in option.flight_no.split("/"): # split connections into legs
                 other_numbers.add(number)              # add each leg to the set
-    
+
+    # The chosen flight's own numbers are removed from the "other flights".
+    # A single flight can also be a leg of another option: AU435 (Milan → Paris) is offered on its own
+    # AND as the second flight of AU406/AU435. Without this line, booking AU435 would count its own number
+    # as "another flight named in the message", and every confirmation of AU435 would be refused.
+    # The other protections still hold: restating AU406/AU435 still names AU406, which is another flight.
+    other_numbers -= set(chosen.flight_no.split("/"))
+
     names_others = any(number in previous for number in other_numbers)
 
     if mentions_chosen_flight and not names_others:
