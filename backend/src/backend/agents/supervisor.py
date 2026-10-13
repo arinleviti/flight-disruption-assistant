@@ -118,7 +118,12 @@ def last_assistant_message(history: list[Message]) -> str:
             return message.content
     return ""
 
-
+#   It answers one question: “may this booking go ahead?” None means yes. An {"error": ...} means no, and tells the model why.
+#   So the whole logic is:
+#   The tool is record_rebooking, so check the confirmation.
+#   Did the previous message contain “Which one would you like?”? If so, it was a list: refuse.
+#   Otherwise, does it name the chosen flight (all its flight numbers, for a connection) and none of the other offered flights? Then it was a confirmation: allow.
+#   Anything else: refuse.
 def confirmation_problem(arguments: dict | None, cases: dict[str, CaseState], history: list[Message]) -> dict | None:
     """Code-level check of Step 5: a flight can only be booked right after it was restated alone.
     **In order to return None, the latest message must contain only the flight being booked, and no other offered flight.**
@@ -133,6 +138,7 @@ def confirmation_problem(arguments: dict | None, cases: dict[str, CaseState], hi
     if case is None:
         return None  # run_tool's own checks will answer
     flight_id = str(arguments.get("flight_id", "")).strip().upper()
+    # next takes the first matching option and returns None as fallback if there isn't one. It finds the option that matches the flight_id being booked.
     chosen = next((o for o in case.rebooking.options_offered if o.flight_id == flight_id), None)
     if chosen is None:
         return None  # run_tool refuses flights that were never offered

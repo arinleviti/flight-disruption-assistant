@@ -39,7 +39,7 @@ def build_confirmation(conn: sqlite3.Connection, booking_ref: str) -> dict:
         ).fetchone()
         for leg_id in split_legs(saved["flight_id"])
     ]
-    first, last = legs[0], legs[-1]   # the same flight when it's direct
+    first, last = legs[0], legs[-1]   # the same flight when it's direct. legs[-1] is the last item
     via = first["destination"] if len(legs) > 1 else None
 
     confirmation = {
@@ -87,6 +87,8 @@ def record_rebooking(booking_ref: str, flight_id: str) -> dict:
 
     try:
         # 1. Does this booking already have a rebooking?
+        # conn.execute(sql, values). It hands SQLite two things: sql: the text, still full of ? values: the list 
+        # SQLite then does the matching inside itself
         #execute() returns a cursor, fetchone() returns the first row or None if there are no rows.
         #[booking_ref] placed after the comma inside an execute call is a list of parameters to be substituted into the SQL query. The ? in the query is replaced by the value of booking_ref.
         existing = conn.execute(
@@ -127,6 +129,7 @@ def record_rebooking(booking_ref: str, flight_id: str) -> dict:
 
         # 3. The passenger changed their mind: give the old seats back
         # and remove the old rebooking
+        # existing is not None AND existing["flight_id"] != flight_id, so the passenger is changing to a different trip.
         if existing is not None:
             for old_leg_id in split_legs(existing["flight_id"]):
                 conn.execute(

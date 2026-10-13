@@ -21,7 +21,7 @@ load_dotenv()  # before importing anything that reads environment variables (API
 import argparse
 import json
 import time
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from langfuse import propagate_attributes
@@ -41,6 +41,9 @@ RESULTS_DIR = Path("eval_results")
 # Guards that only fire when something went wrong (a refused call, an agent that never answered).
 # Protective guards that fire on purpose, like booking_not_confirmed, are not in this list.
 FAILURE_GUARDS = {"missing_arguments", "max_rounds"}
+
+# How much later than the earliest acceptable option the booked flight may arrive
+EARLIEST_ARRIVAL_MARGIN_MINUTES = 30
 
 
 # ---------------------------------------------------------------- running one scenario
@@ -138,6 +141,14 @@ def run_checks(scenario: Scenario, turns: list[dict], cases: dict[str, CaseState
         booked_date = to_local_time(confirmed.departure, confirmed.origin)[:10]
         results.append(check("not before the original date", booked_date >= original_date,
                              f"original {original_date}, booked {booked_date}"))
+    if scenario.booked_day_offset is not None and confirmed and case.original_booking:
+        # Days between the original departure and the booked one, both on the origin airport's calendar
+        original = case.original_booking
+        original_day = date.fromisoformat(to_local_time(original.scheduled_departure, original.origin)[:10])
+        booked_day = date.fromisoformat(to_local_time(confirmed.departure, confirmed.origin)[:10])
+        offset = (booked_day - original_day).days
+        results.append(check("booked on the expected day", offset == scenario.booked_day_offset,
+                             f"expected {scenario.booked_day_offset} day(s) after the original, got {offset}"))
     if scenario.booked_flight_nos and confirmed:
         results.append(check("booked the expected flight", confirmed.flight_no in scenario.booked_flight_nos,
                              f"expected one of {sorted(scenario.booked_flight_nos)}, got {confirmed.flight_no}"))
@@ -159,8 +170,12 @@ def run_checks(scenario: Scenario, turns: list[dict], cases: dict[str, CaseState
             and not (scenario.not_via and option.via == scenario.not_via)
         ]
         if acceptable:
+            # A small margin: some flights are set relative to when the eval runs, so two can land
+            # minutes apart, and either is a fine answer. A much later arrival still fails.
             first_arrival = min(option.arrival for option in acceptable)
-            results.append(check("booked the earliest arrival offered", confirmed.arrival == first_arrival,
+            late = confirmed.arrival - first_arrival
+            results.append(check("booked (almost) the earliest arrival offered",
+                                 late <= timedelta(minutes=EARLIEST_ARRIVAL_MARGIN_MINUTES),
                                  f"booked arrives {confirmed.arrival}, earliest acceptable {first_arrival}"))
 
     # 5. Care
@@ -180,6 +195,13 @@ def run_checks(scenario: Scenario, turns: list[dict], cases: dict[str, CaseState
             if scenario.amounts_eur:
                 results.append(check("amount", compensation.amount_eur in scenario.amounts_eur,
                                      f"expected one of {sorted(scenario.amounts_eur)}, got {compensation.amount_eur}"))
+
+    if scenario.compensation_after_rebooking:
+        # succeeded is in the order the tools ran, across the whole conversation
+        in_order = ("record_rebooking" in succeeded and "compensation_agent" in succeeded
+                    and succeeded.index("record_rebooking") < succeeded.index("compensation_agent"))
+        results.append(check("compensation assessed after the rebooking", in_order,
+                             " → ".join(name for name in succeeded if name in ("record_rebooking", "compensation_agent"))))
 
     # 7. Closed
     if scenario.closed:
