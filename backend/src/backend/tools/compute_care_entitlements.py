@@ -11,7 +11,7 @@ POLICY_PATH = Path(__file__).resolve().parents[3] / "data" / "care_policies.json
 
 # A cancellation announced this many days ahead (or more) leaves nobody waiting at the airport:
 # the passenger simply travels on the new flight, so no meals or hotel are owed.
-ADVANCE_NOTICE_DAYS = 7
+ADVANCE_NOTICE_DAYS = 1
 
 
 def meal_threshold_minutes(distance_km: int) -> int:

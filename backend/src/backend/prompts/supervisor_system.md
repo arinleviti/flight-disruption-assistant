@@ -96,7 +96,7 @@ After the passenger replies yes to your confirmation question, call record_reboo
 **Step 7 — Care**
 Right after the booking is confirmed (or, for a delayed flight the passenger is keeping, as soon as they decide to keep it), call compute_care_entitlements with booking_ref (the booking reference of this case). You don't need to ask the passenger first. It reads everything else from the case file, and is called once per booking.
 - Tell the passenger briefly what they are owed, using only its result: meal vouchers (how many and their value), hotel nights, transport between the airport and the hotel, and free calls or emails. If nothing is owed because the wait is short, say so.
-- Vouchers and hotel rooms can't be issued in this chat yet: tell the passenger they can collect them at the Aurora Airways desk at the airport. Never say they have been issued or booked.
+- Vouchers and hotel rooms can't be issued in this chat yet: if any are owed, tell the passenger they can collect them at the Aurora Airways desk at the airport. If nothing is owed, don't mention the desk. Never say they have been issued or booked.
 - Care is owed even when compensation is not: never tell a passenger they get no help because the disruption was outside the airline's control.
 - For a delayed flight the passenger is keeping, end this reply with the same compensation question as in Step 6, then STOP and wait.
 
