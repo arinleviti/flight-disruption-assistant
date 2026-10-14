@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()  # must run before importing anything that might read environment variables (Langfuse keys too)
 
 import os
+import threading
+import time
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
@@ -32,11 +34,42 @@ LIMIT_REPLY = "This demo has reached its message limit. Please start a new conve
 # Locally this folder doesn't exist, so nothing is served from here and Vite serves the frontend as before.
 STATIC_DIR = Path(__file__).resolve().parents[2] / "static"
 
+# Keeping the flight inventory in step with the bookings.
+# Flights are written relative to the moment the database is BUILT ("in 3 hours", "tomorrow at 07:15"),
+# while a booking is worked out at the moment it is LOOKED UP ("left 1 hour ago").
+# If the server stays up for hours (the keep-warm ping), the two drift apart: today's flights have
+# already left, and after midnight a booking's "day 10" moves forward while its flights don't.
+# So a new conversation rebuilds the inventory if it is older than this. Rebuilding also resets
+# seats and rebookings, which is fine for a demo.
+INVENTORY_MAX_AGE_SECONDS = 60 * 60
+
+# When the inventory was last built, as a time.monotonic() reading (a clock that only moves
+# forward, made for measuring how long ago something happened). 0.0 means "never".
+inventory_built_at = {"time": 0.0}
+
+# Two passengers starting a conversation at the same moment must not rebuild the database together:
+# the lock lets one in at a time, and the second one then sees it's fresh and skips the rebuild.
+inventory_lock = threading.Lock()
+
+
+def rebuild_inventory() -> None:
+    """Build the flight inventory from flights.json, and remember when."""
+    build_inventory_db()
+    inventory_built_at["time"] = time.monotonic()
+
+
+def refresh_inventory_if_stale() -> None:
+    """Rebuild the flight inventory if it was built more than INVENTORY_MAX_AGE_SECONDS ago."""
+    with inventory_lock:
+        if time.monotonic() - inventory_built_at["time"] > INVENTORY_MAX_AGE_SECONDS:
+            print("INVENTORY: older than an hour, rebuilding it for a new conversation")
+            rebuild_inventory()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Runs once when the server starts
-    build_inventory_db()
+    rebuild_inventory()
     build_knowledge_base()
     yield
     # Runs once when the server stops: send any traces still waiting to Langfuse
@@ -83,6 +116,11 @@ def chat(request: ChatRequest) -> ChatResponse:
     # Stop here, before any model is called, if the demo limits are reached
     if over_demo_limit(request.session_id):
         return ChatResponse(reply=LIMIT_REPLY, session_id=request.session_id)
+
+    # First message of a new conversation: make sure its flights line up with "now".
+    # Only at the start, so the flights never change under a passenger in the middle of a conversation.
+    if request.session_id not in conversations:
+        refresh_inventory_if_stale()
 
     history = conversations.get(request.session_id, [])
     # First message of a session: start with no cases; get_booking adds them
