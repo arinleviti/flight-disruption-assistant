@@ -280,10 +280,11 @@ def run_tool(name: str, arguments: dict | None, cases: dict[str, CaseState]) -> 
     # The rebooking agent needs to know when the passenger was supposed to fly.
     # Code adds it from the case file; the model never has to send it.
     if name == "rebooking_agent":
-        case = find_case_by_flight(cases, arguments["disrupted_flight_no"])
+        case = find_case_by_flight(cases, arguments["disrupted_flight_no"])       
         if case and case.original_booking:
             booking = case.original_booking
             arguments["original_departure_local"] = to_local_time(booking.scheduled_departure, booking.origin)
+            arguments["disruption_type"] = case.disruption.type if case and case.disruption else ""
 
     try:
         # turns that dictionary into named arguments and calls the function. For example, if arguments is {"booking_ref": "1254RF"}, it will call get_booking(booking_ref="1254RF").
@@ -392,8 +393,8 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
                 messages.append({
                     "role": "user",
                     "content": (
-                        "Your last reply was empty. Write your reply to the passenger now, "
-                        "based on the conversation and tool results so far. Do not call any tools."
+                        "Your last reply was empty. If you still need information, call the tools you need; "
+                        "then write your reply to the passenger, based on the conversation and tool results."
                     ),
                 })
                 continue

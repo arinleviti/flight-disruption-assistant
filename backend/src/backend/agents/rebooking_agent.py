@@ -119,6 +119,7 @@ def get_flights_options(
     preferences: str = "",
     special_needs: str = "",
     original_departure_local: str = "",
+    disruption_type: str = "",
 ) -> dict:
     # original_departure_local is NOT in the tool schema: the model never sends it.
     # The supervisor's run_tool fills it in from the case file before calling this function.
@@ -134,10 +135,22 @@ def get_flights_options(
         "disrupted_flight_no": disrupted_flight_no_clean,
         "preferences": preferences_clean,
         "special_needs": special_needs_clean,
+        "disruption_type": disruption_type
     }
 
     if not parameters["origin"] or not parameters["destination"] or not parameters["disrupted_flight_no"]:
         return {"error": "origin, destination and disrupted_flight_no are required."}
+
+    # No search before the disruption is known. With two bookings in one chat, the model once
+    # skipped get_disruption for the second one, assumed it was cancelled like the first, and
+    # rebooked a passenger whose flight was only delayed (and still leaving that evening).
+    if not disruption_type:
+        return {
+            "error": (
+                f"The disruption for flight {disrupted_flight_no_clean} hasn't been checked yet. "
+                "Call get_disruption for it first, and tell the passenger what happened before searching."
+            )
+        }
 
     # Lets the model turn "tonight" or "tomorrow morning" into real dates, in local time
     parameters["current_local_time_at_origin"] = current_local_time(origin_clean)

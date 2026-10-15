@@ -182,8 +182,9 @@ def compensation_agent(case: CaseState) -> dict:
     if case.disruption.type == "cancellation" and case.rebooking.confirmed is None:
         return {
             "error": (
-                "The new arrival time isn't known yet. Rebook the passenger first: "
-                "compensation depends on how late they arrive."
+                "Compensation for a cancellation can only be assessed here once the passenger has a "
+                "new flight, because it depends on how late they arrive. If they chose a refund instead, "
+                "don't rebook them: tell them they can claim compensation from Aurora Airways customer service."
             )
         }
 
