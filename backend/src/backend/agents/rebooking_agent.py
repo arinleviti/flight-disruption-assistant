@@ -270,7 +270,10 @@ REBOOKING_AGENT_TOOL = {
                 },
                 "preferences": {
                     "type": "string",
-                    "description": "The passenger's timing or routing wishes in their own words. Empty if none.",
+                    "description": (
+                        "Everything the passenger has said about the new flight, quoted word for word "
+                        "(e.g. \"I need the earliest, I can leave in the morning too\"). Empty if none."
+                    ),  
                 },
                 "special_needs": {
                     "type": "string",

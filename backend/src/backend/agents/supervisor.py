@@ -12,6 +12,7 @@ from backend.tools.compute_care_entitlements import COMPUTE_CARE_ENTITLEMENTS_TO
 from backend.tools.close_case import CLOSE_CASE_TOOL, close_case
 from backend.tools.time_utils import to_local_time
 from backend.observability import call_llm, record_guard, trace_tool
+from backend.tools.get_time import GET_TIME_TOOL, get_time
 import json
 from backend.state.case_file import (
     add_local_times,
@@ -37,6 +38,7 @@ TOOL_SCHEMAS = [
     COMPUTE_CARE_ENTITLEMENTS_TOOL,
     COMPENSATION_AGENT_TOOL,
     CLOSE_CASE_TOOL,
+    GET_TIME_TOOL,
 ]  # the model sees these tools and can call them
 
 # Keys must match the "name" in each tool schema; values are the Python functions to run.
@@ -48,6 +50,7 @@ TOOL_FUNCTIONS = {
     "compute_care_entitlements": compute_care_entitlements,
     "compensation_agent": compensation_agent,
     "close_case": close_case,
+    "get_time": get_time,
 }
 
 # Each tool's required arguments, read from its own schema: {"get_booking": ["booking_ref"], ...}
