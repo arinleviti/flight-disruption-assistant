@@ -1,3 +1,4 @@
+
 from backend.models.chat import Message
 from backend.models.case_state import CaseState
 from pathlib import Path
@@ -22,8 +23,8 @@ from backend.state.case_file import (
     update_case_file,
 )
 
-MODEL = "groq/openai/gpt-oss-120b"
-FALLBACK_MODELS = ["groq/openai/gpt-oss-20b"]
+MODEL = "anthropic/claude-haiku-5-5"           # supervisor: follows the long prompt more reliably
+FALLBACK_MODELS = ["groq/openai/gpt-oss-120b"] # if Claude is unavailable, fall back to Groq
 NUM_RETRIES = 0
 MAX_TOOL_ROUNDS = 8  # safety limit: stop if the model keeps calling tools
 MAX_EMPTY_REPLIES = 1  # how many times we ask the model again when it answers with nothing
@@ -301,7 +302,13 @@ def answer_request(message: str, history: list[Message] | None = None, cases: di
     if cases is None:
         cases = {}
 
-    messages: list[dict] = [{"role": "system", "content": SUPERVISOR_PROMPT}]
+    # Prompt caching (Claude): the tools and this system prompt are identical on every call, so
+    # Anthropic can reuse them instead of reprocessing them. The breakpoint goes here, on the last
+    # stable piece: the case file and the conversation after it change every turn and aren't cached.
+    messages: list[dict] = [{
+    "role": "system",
+    "content": [{"type": "text", "text": SUPERVISOR_PROMPT, "cache_control": {"type": "ephemeral"}}],
+    }]
     # The case file: facts from earlier tool results, which the history doesn't contain
     messages.append({"role": "system", "content": case_file_summary(cases)})
     messages.extend([m.model_dump() for m in history])
